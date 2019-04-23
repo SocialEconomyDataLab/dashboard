@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>{% block title %}Social Economy Data Lab - Dashboard{% endblock title %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/tachyons/css/tachyons.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Questrial" rel="stylesheet">
+    <style>
+    .questrial {
+        font-family: 'Questrial', sans-serif;
+    }
+    </style>
+  </head>
+  <body class="w-100 sans-serif">
+    <header class="w-100 pa3 ph5-ns bg-white">
+    {% block header %}
+        <h1 class="questrial">
+            <img class="h3 v-mid" src="https://socialeconomydatalab.org/img/logos/sedl_logo_nobkgd.svg" />
+            Social Economy Data Lab - Dashboard
+        </h1>
+    {% endblock header %}
+    </header>
+    <main class="w-100 pa3 ph5-ns bg-white">
+    {% block content %}
+    {% endblock %}
+    </main>
+    <footer>
+    {% block footer %}
+
+    {% endblock footer %}
+    </footer>
+  </body>
+</html>

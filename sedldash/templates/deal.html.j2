@@ -1,0 +1,90 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+<div>
+    <p class="f6 gray">Data &gt; Deal &gt; {{ deal.deal_id }}</p>
+    <h2 class="">
+        <span class="normal f5">Between</span>
+        <a href="{{ url_for('data.arrangingorg', orgid=deal.deal.arrangingOrganization.id) }}">{{ deal.deal.arrangingOrganization.name }}</a>
+        <span class="normal f5">and</span>
+        <a href="{{ url_for('data.recipient', orgid=deal.deal.recipientOrganization.id) }}">{{ deal.deal.recipientOrganization.name }}</a>
+    </h2>
+    <section>
+        <div class="flex flex-wrap">
+            <div class="pa2 w5 tc">
+                <p class="f4 pa0 ma0 tc">Value</p>
+                <p class="f1 pa0 b ma0 tc">{{ deal.deal.value|currency(deal.deal.currency) }}</p>
+            </div>
+            <div class="pa2 w5 tc">
+                <p class="f4 pa0 ma0 tc">Status</p>
+                <p class="f1 pa0 b ma0 tc">{{ deal.deal.status }}</p>
+            </div>
+            <div class="pa2 w5 tc">
+                <p class="f4 pa0 ma0 tc">Date</p>
+                <p class="f1 pa0 b ma0 tc">{{ deal.deal.dealDate|todate("%b %Y") }}</p>
+            </div>
+        </div>
+    </section>
+    <section>
+        <h3>Investment components:</h3>
+        <div class="flex flex-wrap">
+        {% for i, invest in deal.deal.get("investments", {}).items() %}
+            {% for j in invest %}
+            <div class="w-25 pa2 mr2 bg-blue white">
+            {% if i=="grants" %}
+                <h4 class="pa0 ma0 f4"><span class="normal">Grant from </span>{{ j.fundingOrganization.name }}</h4>
+                <p>Amount disbursed: <strong>{{ j.amountDisbursed|currency(j.currency) }}</strong></p>
+            {% elif i=="equity" %}
+                <h4 class="pa0 ma0 f4"><span class="normal">Equity investment by </span>{{ j.fundingOrganization.name }}</h4>
+                <p>Value: <strong>{{ j.value|currency(j.currency) }}</strong></p>
+            {% elif i=="credit" %}
+                <h4 class="pa0 ma0 f4"><span class="normal">Credit from </span>{{ j.fundingOrganization.name }}</h4>
+                <p>Value: <strong>{{ j.value|currency(j.currency) }}</strong></p>
+                <p>Effective interest rate: <strong>{{ j.interestRate.effectiveRate }}%</strong></p>
+            {% endif %}
+            </div>
+            {% endfor %}
+        {% endfor %}
+        </div>
+    </section>
+    <section>
+        <h3>Recipient Organisation:</h3>
+        <div class="flex flex-wrap">
+            <div class="w-25 pa2 mr2 bg-blue white">
+                <h4 class="pa0 ma0 f4">
+                    <a href="{{ url_for('data.recipient', orgid=deal.deal.recipientOrganization.id) }}" class="white dim">
+                    {{ deal.deal.recipientOrganization.name }}
+                    </a>
+                </h4>
+                <p>{{ deal.deal.recipientOrganization.addressLocality }}</p>
+                <p><a href="{{ deal.deal.recipientOrganization.url }}" class="white dim underline">{{ deal.deal.recipientOrganization.url }}</a></p>
+            </div>
+        </div>
+    </section>
+    <section>
+        <h3>Arranging Organisation:</h3>
+        <div class="flex flex-wrap">
+            <div class="w-25 pa2 mr2 bg-blue white">
+                <h4 class="pa0 ma0 f4">
+                    <a href="{{ url_for('data.arrangingorg', orgid=deal.deal.arrangingOrganization.id) }}" class="white dim">
+                    {{ deal.deal.arrangingOrganization.name }}
+                    </a>
+                </h4>
+                <p>{{ deal.deal.arrangingOrganization.addressLocality }}</p>
+                <p><a href="{{ deal.deal.arrangingOrganization.url }}" class="white dim underline">{{ deal.deal.arrangingOrganization.url }}</a></p>
+            </div>
+        </div>
+    </section>
+    <section>
+        <h3>Source:</h3>
+        <ul>
+            <li>Deal ID: <code>{{ deal.deal_id }}</code></li>
+            <li>File title: "{{ deal.metadata.Title }}"</li>
+            <li>File issued: {{ deal.metadata.Issued|todate("%d/%m/%Y") }}</li>
+            <li>Data license: "{{ deal.metadata.License }}"</li>
+            <li>Publisher: <a href="{{ deal.metadata['Publisher:Website'] }}">{{ deal.metadata["Publisher:Name"] }}</a></li>
+        </ul>
+    </section>
+    {# <pre>{{ deal|tojson(indent=4) }}</pre> #}
+</div>
+{% endblock content %}}
