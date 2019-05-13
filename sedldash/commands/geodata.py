@@ -25,7 +25,7 @@ def import_lsoa():
     lsoas.loc[lsoas["LAD18CD"].str.startswith("N"), "RGN18NM"] = "Northern Ireland"
     lsoas.to_sql(
         'lsoa_lookup',
-        con=current_app.config['SQLALCHEMY_DATABASE_URI'],
+        con=db.engine,
         if_exists='replace',
     )
     db.engine.execute(

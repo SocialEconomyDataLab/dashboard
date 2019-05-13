@@ -3,15 +3,14 @@
 {% block content %}
 <div>
     <h2>Data collections</h2>
-    {% for c in collections %}
+    {% for collection, c in collections.iterrows() %}
     <section>
-        <h3>{{ c.collection }}</h3>
-        <div class="flex flex-wrap mb2">
-        <div>
+        <h3>{{ collection }}</h3>
+        <div class="">
         <div class="flex flex-wrap mb2">
             <div class="pa2 tc mr2 bg-blue white br3">
                 <p class="f4 pa0 ma0 tc">Deals</p>
-                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.deals) }}</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.deal_count) }}</p>
             </div>
             <div class="pa2 tc mr2 bg-blue white br3">
                 <p class="f4 pa0 ma0 tc">Value</p>
@@ -106,6 +105,7 @@
             </div>
         </div>
         </div>
+        {% if collection in collections_by_year.index.get_level_values(0) %}
         <div>
         <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
             <thead>
@@ -116,18 +116,18 @@
                 </tr>
             </thead>
             <tbody>
-            {% for y in collections_by_year %}
-                {% if y.collection == c.collection and y.deal_date %}
+            {% for deal_year, y in collections_by_year.xs(collection).iterrows() %}
                 <tr>
-                    <td class="pv2 ph3">{{ y.deal_date }}</td>
-                    <td class="pv2 ph3">{{ "{:,.0f}".format(y.deals) }}</td>
-                    <td class="pv2 ph3">{{ y.deal_value|currency }}</td>
+                    <td class="pv2 ph3">{{ deal_year.year }}</td>
+                    <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                    <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
                 </tr>
-                {% endif %}
             {% endfor %}
             </tbody>
         </table>
         </div>
+        {% endif %}
+        {% if collection in collections_by_classification.index.get_level_values(0) %}
         <div>
         <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
             <thead>
@@ -138,18 +138,18 @@
                 </tr>
             </thead>
             <tbody>
-            {% for y in collections_by_classification %}
-                {% if y.collection == c.collection and y.classification %}
+            {% for classification, y in collections_by_classification.xs(collection).iterrows() %}
                 <tr>
-                    <td class="pv2 ph3">{{ y.classification }}</td>
-                    <td class="pv2 ph3">{{ "{:,.0f}".format(y.deals) }}</td>
-                    <td class="pv2 ph3">{{ y.deal_value|currency }}</td>
+                    <td class="pv2 ph3">{{ classification }}</td>
+                    <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                    <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
                 </tr>
-                {% endif %}
             {% endfor %}
             </tbody>
         </table>
         </div>
+        {% endif %}
+        {% if collection in collections_by_region.index.get_level_values(0) %}
         <div>
         <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
             <thead>
@@ -160,18 +160,39 @@
                 </tr>
             </thead>
             <tbody>
-            {% for y in collections_by_region %}
-                {% if y.collection == c.collection and y.region %}
+            {% for region, y in collections_by_region.xs(collection).iterrows() %}
                 <tr>
-                    <td class="pv2 ph3">{{ y.region }}</td>
-                    <td class="pv2 ph3">{{ "{:,.0f}".format(y.deals) }}</td>
-                    <td class="pv2 ph3">{{ y.deal_value|currency }}</td>
+                    <td class="pv2 ph3">{{ region }}</td>
+                    <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                    <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
                 </tr>
-                {% endif %}
             {% endfor %}
             </tbody>
         </table>
         </div>
+        {% endif %}
+        {% if collection in collections_by_status.index.get_level_values(0) %}
+        <div>
+        <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+            <thead>
+                <tr>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Status</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for status, y in collections_by_status.xs(collection).iterrows() %}
+                <tr>
+                    <td class="pv2 ph3">{{ status }}</td>
+                    <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                    <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% endif %}
         </div>
     </section>
     {% endfor %}
