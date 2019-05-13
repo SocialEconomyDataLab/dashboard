@@ -1,0 +1,179 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+<div>
+    <h2>Data collections</h2>
+    {% for c in collections %}
+    <section>
+        <h3>{{ c.collection }}</h3>
+        <div class="flex flex-wrap mb2">
+        <div>
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Deals</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.deals) }}</p>
+            </div>
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Value</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.deal_value|currency }}</p>
+            </div>
+        </div>
+        {% if c.share_offers %}
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Share offers</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.share_offers) }}</p>
+            </div>
+            {% if c.share_offers_investmenttarget %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Investment sought</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.share_offers_investmenttarget|currency }}</p>
+            </div>
+            {% endif %}
+            {% if c.equity_value %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Investment received</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.equity_value|currency }}</p>
+            </div>
+            {% endif %}
+            {% if c.equity_value and c.share_offers_investmenttarget %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Investment shortfall</p>
+                <p class="f1 pa0 b ma0 tc">{{ (c.share_offers_investmenttarget - c.equity_value)|currency }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if c.equity_count %}
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Deals with equity</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.count_with_equity) }}</p>
+            </div>
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Equity investments</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.equity_count) }}</p>
+            </div>
+            {% if c.equity_value %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Value</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.equity_value|currency }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if c.grant_count %}
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Deals with grants</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.count_with_grant) }}</p>
+            </div>
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Grants</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.grant_count) }}</p>
+            </div>
+            {% if c.grant_value %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Value</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.grant_value|currency }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if c.credit_count %}
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Deals with credit</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.count_with_grant) }}</p>
+            </div>
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Credit</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.credit_count) }}</p>
+            </div>
+            {% if c.credit_value %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Value</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.credit_value|currency }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Complex deals</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c["2_or_more_elements"]) }}</p>
+                <p class="f6 pa0 ma0 tc">(deals with 2 or more elements)</p>
+            </div>
+        </div>
+        </div>
+        <div>
+        <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+            <thead>
+                <tr>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Year</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for y in collections_by_year %}
+                {% if y.collection == c.collection and y.deal_date %}
+                <tr>
+                    <td class="pv2 ph3">{{ y.deal_date }}</td>
+                    <td class="pv2 ph3">{{ "{:,.0f}".format(y.deals) }}</td>
+                    <td class="pv2 ph3">{{ y.deal_value|currency }}</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div>
+        <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+            <thead>
+                <tr>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Classification</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for y in collections_by_classification %}
+                {% if y.collection == c.collection and y.classification %}
+                <tr>
+                    <td class="pv2 ph3">{{ y.classification }}</td>
+                    <td class="pv2 ph3">{{ "{:,.0f}".format(y.deals) }}</td>
+                    <td class="pv2 ph3">{{ y.deal_value|currency }}</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div>
+        <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+            <thead>
+                <tr>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">LSOA</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for y in collections_by_region %}
+                {% if y.collection == c.collection and y.lsoa %}
+                <tr>
+                    <td class="pv2 ph3">{{ y.lsoa }}</td>
+                    <td class="pv2 ph3">{{ "{:,.0f}".format(y.deals) }}</td>
+                    <td class="pv2 ph3">{{ y.deal_value|currency }}</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        </div>
+    </section>
+    {% endfor %}
+</div>
+{% endblock content %}}
