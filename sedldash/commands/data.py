@@ -101,6 +101,7 @@ def generate_df():
     deals.loc[:, "deal_year"] = deals["deal_date"].dt.year
 
     # add counts for aggregates
+    deals.loc[:, "count_with_share_offers"] = deals["share_offers"] > 0
     deals.loc[:, "count_with_equity"] = deals["equity_count"] > 0
     deals.loc[:, "count_with_grant"] = deals["grant_count"] > 0
     deals.loc[:, "count_with_credit"] = deals["credit_count"] > 0

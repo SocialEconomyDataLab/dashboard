@@ -14,6 +14,8 @@ def index():
     aggregates = {
         "deal_count": "sum",
         "deal_value": "sum",
+        "count_with_share_offers": "sum",
+        "share_offers": "sum",
         "share_offers_investmentTarget": "sum",
         "count_with_equity": "sum",
         "equity_count": "sum",

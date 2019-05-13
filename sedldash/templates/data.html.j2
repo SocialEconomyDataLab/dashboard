@@ -23,10 +23,10 @@
                 <p class="f4 pa0 ma0 tc">Share offers</p>
                 <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.share_offers) }}</p>
             </div>
-            {% if c.share_offers_investmenttarget %}
+            {% if c.share_offers_investmentTarget %}
             <div class="pa2 tc mr2 bg-blue white br3">
                 <p class="f4 pa0 ma0 tc">Investment sought</p>
-                <p class="f1 pa0 b ma0 tc">{{ c.share_offers_investmenttarget|currency }}</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.share_offers_investmentTarget|currency }}</p>
             </div>
             {% endif %}
             {% if c.equity_value %}
@@ -35,10 +35,10 @@
                 <p class="f1 pa0 b ma0 tc">{{ c.equity_value|currency }}</p>
             </div>
             {% endif %}
-            {% if c.equity_value and c.share_offers_investmenttarget %}
+            {% if c.equity_value and c.share_offers_investmentTarget %}
             <div class="pa2 tc mr2 bg-blue white br3">
                 <p class="f4 pa0 ma0 tc">Investment shortfall</p>
-                <p class="f1 pa0 b ma0 tc">{{ (c.share_offers_investmenttarget - c.equity_value)|currency }}</p>
+                <p class="f1 pa0 b ma0 tc">{{ (c.share_offers_investmentTarget - c.equity_value)|currency }}</p>
             </div>
             {% endif %}
         </div>
