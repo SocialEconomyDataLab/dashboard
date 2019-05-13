@@ -154,16 +154,16 @@
         <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
             <thead>
                 <tr>
-                    <th class="pv2 ph3 tl f6 fw6 ttu">LSOA</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Region</th>
                     <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
                     <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
                 </tr>
             </thead>
             <tbody>
             {% for y in collections_by_region %}
-                {% if y.collection == c.collection and y.lsoa %}
+                {% if y.collection == c.collection and y.region %}
                 <tr>
-                    <td class="pv2 ph3">{{ y.lsoa }}</td>
+                    <td class="pv2 ph3">{{ y.region }}</td>
                     <td class="pv2 ph3">{{ "{:,.0f}".format(y.deals) }}</td>
                     <td class="pv2 ph3">{{ y.deal_value|currency }}</td>
                 </tr>

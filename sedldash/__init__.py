@@ -5,6 +5,7 @@ from flask import Flask
 
 from .db import db
 from .blueprints import add_blueprints
+from .commands import geodata
 
 def create_app(test_config=None):
     
@@ -33,6 +34,7 @@ def create_app(test_config=None):
 
     add_blueprints(app)
     add_template_filters(app)
+    add_commands(app)
 
     return app
 
@@ -63,3 +65,6 @@ def add_template_filters(app):
         if currency=="EUR":
             return "$" + f.format(v)
         return currency + f.format(v)
+
+def add_commands(app):
+    app.cli.add_command(geodata.geo_cli)

@@ -25,9 +25,11 @@ def index():
     sum(case when (equity_count + grant_count + credit_count) > 1 then 1 else 0 end) as "2_or_more_elements"
 from (
     select distinct on(deal.deal_id) deal.deal_id,
+        "deal"->>'status' as deal_status,
         deal.collection,
-        classification,
-        lsoa,
+        trim(classification) as classification,
+        "LAD18NM" as "local_authority",
+        "RGN18NM" as "region",
         ("deal"->>'value')::float as deal_value,
         extract (year from to_date("deal"->>'dealDate', 'YYYY-MM-DD'))::int as deal_date,
         share_offers,
@@ -80,6 +82,8 @@ from (
                 deal->'recipientOrganization'->'location'->(0)->>'geoCode' as "lsoa"
             from deal
         ) as "lsoa" on "deal".deal_id = "lsoa".deal_id
+        left outer join "lsoa_lookup"
+            on "lsoa"."lsoa" = "lsoa_lookup"."LSOA11CD"
     where deal.collection != 'key-fund-005'
 ) as deals
 group by {groupby}
@@ -93,7 +97,7 @@ order by {groupby}'''
     q = text(select_statement.format(groupby="collection, classification"))
     collections_by_classification = db.engine.execute(q).fetchall()
 
-    q = text(select_statement.format(groupby="collection, lsoa"))
+    q = text(select_statement.format(groupby="collection, region"))
     collections_by_region = db.engine.execute(q).fetchall()
 
     return render_template('data.html.j2',
