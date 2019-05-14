@@ -97,7 +97,7 @@ var myPieChart = new Chart('mini-pie-{{ id }}', {
                     {{ mini_pie(summary.equity_value / summary.deal_value) }}
                 </li>
                 {% endif %}
-                {% if summary.equity_value %}
+                {% if summary.credit_value %}
                 <li>
                     <strong>{{ summary.credit_value|currency }}</strong> of credit
                     ({{ "{:,.0%}".format(summary.credit_value / summary.deal_value)  }} of total social investment)
