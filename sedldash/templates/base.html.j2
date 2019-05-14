@@ -3,6 +3,7 @@
   <head>
     <title>{% block title %}Social Economy Data Lab - Dashboard{% endblock title %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% block style %}
     <link rel="stylesheet" href="https://unpkg.com/tachyons/css/tachyons.min.css">
     <link href="https://fonts.googleapis.com/css?family=Questrial" rel="stylesheet">
     <style>
@@ -10,24 +11,32 @@
         font-family: 'Questrial', sans-serif;
     }
     </style>
+    {% endblock %}
+    {% block headscripts %}{% endblock %}
   </head>
   <body class="w-100 sans-serif">
-    <header class="w-100 pa3 ph5-ns bg-white">
+    <header class="w-100 pa3 ph5-ns bg-white cf">
     {% block header %}
         <h1 class="questrial">
-            <img class="h3 v-mid" src="https://socialeconomydatalab.org/img/logos/sedl_logo_nobkgd.svg" />
+            {# <img class="h3 v-mid" src="https://socialeconomydatalab.org/img/logos/sedl_logo_nobkgd.svg" /> #}
             Social Economy Data Lab - Dashboard
         </h1>
+        <hr>
+        <p class="">
+          The Social Economy Data Lab supports the use of data to create better conditions for social investment in the UK
+        </p>
     {% endblock header %}
     </header>
-    <main class="w-100 pa3 ph5-ns bg-white">
+    <main class="w-100 pa3 ph5-ns bg-white cf">
     {% block content %}
     {% endblock %}
     </main>
-    <footer>
+    <footer class="w-100 pa3 ph5-ns bg-white cf">
     {% block footer %}
-
+      <hr>
+      <p>Footer text and copyright</p>
     {% endblock footer %}
     </footer>
+    {% block footscripts %}{% endblock %}
   </body>
 </html>

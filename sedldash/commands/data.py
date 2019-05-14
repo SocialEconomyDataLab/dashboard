@@ -8,6 +8,81 @@ from ..db import db
 
 data_cli = AppGroup('data')
 
+
+@data_cli.command('prepare')
+def prepare_data():
+    '''
+    -- simple offers table
+    CREATE TABLE public.offers (
+        deal_id varchar NOT NULL,
+        id varchar NOT NULL,
+        offer json NOT NULL,
+        CONSTRAINT offers_pk PRIMARY KEY (deal_id,id)
+    );
+
+    insert into offers
+    select deal_id,
+        coalesce("id", md5("offer"::text)) as "id",
+        "offer"
+    from (
+        select deal_id,
+            jsonb_array_elements("deal"->'offers')->>'id' as id,
+            jsonb_array_elements("deal"->'offers') as "offer"
+        from "deal"
+    ) as a
+    group by deal_id, id, offer;
+
+    -- simple projects table
+    CREATE TABLE public.projects (
+        deal_id varchar NOT NULL,
+        id varchar NOT NULL,
+        project json NOT NULL,
+        CONSTRAINT projects_pk PRIMARY KEY (deal_id,id)
+    );
+
+    insert into projects
+    select deal_id,
+        coalesce("id", md5("project"::text)) as "id",
+        "project"
+    from (
+        select deal_id,
+            jsonb_array_elements("deal"->'projects')->>'id' as id,
+            jsonb_array_elements("deal"->'projects') as "project"
+        from "deal"
+    ) as a
+    group by deal_id, id, project;
+
+    -- simple investments table
+    CREATE TABLE public.investments (
+        deal_id varchar NOT NULL,
+        id varchar NOT NULL,
+        investment_type varchar NOT NULL,
+        investment json NOT NULL,
+        CONSTRAINT investments_pk PRIMARY KEY (deal_id,id)
+    );
+
+    insert into investments
+    select DISTINCT on(coalesce("id", md5("investment"::text || "deal_id")), "deal_id")
+        deal_id,
+        coalesce("id", md5("investment"::text || "deal_id")) as "id",
+        investment_type,
+        investment
+    from (
+        select deal_id,
+            json_array_elements(investment)->>'id' as "id",
+            investment_type,
+            json_array_elements(investment) as "investment"
+        from (
+            select "deal_id",
+                row_to_json(jsonb_each("deal"->'investments'))->>'key' as investment_type,
+                row_to_json(jsonb_each("deal"->'investments'))->'value' as investment
+            from deal
+        ) as investments
+        where json_typeof(investment)::text = 'array'
+    ) as a;
+    '''    
+
+
 @data_cli.command('generate_df')
 def generate_df():
 
@@ -15,10 +90,13 @@ def generate_df():
     select distinct on(deal.deal_id) deal.deal_id,
         1 as deal_count,
         "deal"->>'status' as deal_status,
+        "deal"->'recipientOrganization'->>'id' as recipient_id,
         deal.collection,
         trim(classification) as classification,
         "LAD18NM" as "local_authority",
         "RGN18NM" as "region",
+        "latitude",
+        "longitude",
         ("deal"->>'value')::float as deal_value,
         to_date("deal"->>'dealDate', 'YYYY-MM-DD') as deal_date,
         share_offers,
@@ -68,7 +146,9 @@ def generate_df():
         ) as "credit" on "deal".deal_id = "credit".deal_id
         left outer join (
             select distinct on(deal_id) deal_id, 
-                deal->'recipientOrganization'->'location'->(0)->>'geoCode' as "lsoa"
+                deal->'recipientOrganization'->'location'->(0)->>'geoCode' as "lsoa", 
+                deal->'recipientOrganization'->'location'->(0)->>'latitude' as "latitude", 
+                deal->'recipientOrganization'->'location'->(0)->>'longitude' as "longitude"
             from deal
         ) as "lsoa" on "deal".deal_id = "lsoa".deal_id
         left outer join "lsoa_lookup"
@@ -95,6 +175,21 @@ def generate_df():
         "Wales",
     ], ordered=True)
     deals.loc[:, "region"] = deals["region"].astype(regions)
+
+    # turn status into categories
+    statuses = pd.api.types.CategoricalDtype(categories=[
+        "live",
+        "closed",
+        "didNotProceed",
+        "pipeline",
+    ], ordered=True)
+    deals.loc[:, "deal_status"] = deals["deal_status"].astype(statuses)
+    deals["deal_status"].cat.rename_categories({
+        "live": "Live",
+        "closed": "Closed",
+        "didNotProceed": "Did not proceed",
+        "pipeline": "In pipeline",
+    }, inplace=True)
 
     # sort out date field
     deals.loc[:, "deal_date"] = pd.to_datetime(deals["deal_date"])

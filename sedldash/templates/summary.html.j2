@@ -1,0 +1,650 @@
+{% extends "base.html.j2" %}
+
+{% macro random_int(len) -%}
+  {% for n in range(len) -%}
+    {{ [0,1,2,3,4,5,6,7,8,9]|random }}
+  {%- endfor %}
+{%- endmacro %}
+
+{% macro comma_list(items) %}
+    {% for i in items %}
+        {% if loop.revindex == 1 %}
+        and
+        {% elif loop.index > 1 %}
+        ,
+        {% endif %}
+        {{ i }}
+    {% endfor %}
+{% endmacro %}
+
+{% macro mini_pie(amount, colour='red', size=30) %}
+{% set id = random_int(4) %}
+<canvas id="mini-pie-{{ id }}" style="width: {{ size }}px !important; display: inline !important; vertical-align: bottom;" height="{{ size }}" class='di'>
+<script>
+var myPieChart = new Chart('mini-pie-{{ id }}', {
+    type: 'pie',
+    data: {
+        datasets: [{
+            data: [{{ amount }}, {{ 1-amount }}],
+            backgroundColor: ['{{ colour }}', 'rgba(0, 0, 0, 0.1)'],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: false,
+        animation: {
+            animateRotate: false
+        },
+        tooltips: {
+            enabled: false
+        }
+    }
+});
+</script>
+{% endmacro %}
+
+{% block style %}
+{{ super() }}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css"
+      integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+      crossorigin=""/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css"
+      integrity="sha256-+bdWuWOXMFkX0v9Cvr3OWClPiYefDQz9GGZP/7xZxdc="
+      crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css" 
+      integrity="sha256-LWhzWaQGZRsWFrrJxg+6Zn8TT84k0/trtiHBc6qcGpY=" 
+      crossorigin="anonymous" />
+{% endblock %}
+
+{% block headscripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.min.js" 
+        integrity="sha256-xKeoJ50pzbUGkpQxDYHD7o7hxe0LaOGeguUidbq6vis=" 
+        crossorigin="anonymous"></script>
+<script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
+        integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
+        crossorigin=""></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster-src.js"
+        integrity="sha256-UxMFwvJ2+HaHDi1Ik5WYCuUcv1yS+hS5QYitB0ev0JQ="
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js" 
+        integrity="sha256-65UqrlgGoRAnKfKRuriH3eeDrOhZgZo1SCenduc+SGo=" 
+        crossorigin="anonymous"></script>
+{% endblock %}
+
+{% block content %}
+<div class="fl w-25">
+    <div class="">
+        <h3 class="mt0 mb2 pa0">Filters</h3>
+        <input class="w-100" type="text" placeholder="search" />
+    </div>
+</div>
+<div class="fl w-75 pl3 flex flex-wrap">
+    <div class="w-two-thirds pr3 mb3">
+        <div class="ba bw2 b--blue br3 pa2">
+            <p class="mt0 mb3 pa0">
+                <strong>{{ "{:,.0f}".format(summary.recipient_id) }}</strong> organisations received social investment 
+                in <strong>{{ "{:,.0f}".format(summary.deal_count) }}</strong> deals 
+                between {{ "{:.0f}".format(summary.deal_year_min) }} and {{ "{:.0f}".format(summary.deal_year_max) }}*
+            </p>
+            <p class="mt0 mb3 pa0">
+                <strong>{{ summary.deal_value|currency }}</strong> of social investment arranged
+            </p>
+            <ul class="">
+                {% if summary.equity_value %}
+                <li>
+                    <strong>{{ summary.equity_value|currency }}</strong> of equity arranged
+                    ({{ "{:,.0%}".format(summary.equity_value / summary.deal_value)  }} of total social investment)
+                    {{ mini_pie(summary.equity_value / summary.deal_value) }}
+                </li>
+                {% endif %}
+                {% if summary.equity_value %}
+                <li>
+                    <strong>{{ summary.credit_value|currency }}</strong> of credit
+                    ({{ "{:,.0%}".format(summary.credit_value / summary.deal_value)  }} of total social investment)
+                    {{ mini_pie(summary.credit_value / summary.deal_value) }}
+                </li>
+                {% endif %}
+                {% if summary.grant_value %}
+                <li>
+                    <strong>{{ summary.grant_value|currency }}</strong> of grants
+                    ({{ "{:,.0%}".format(summary.grant_value / summary.deal_value)  }} of total social investment)
+                    {{ mini_pie(summary.grant_value / summary.deal_value) }}
+                </li>
+                {% endif %}
+            </ul>
+            <p class="mt0 mb3 pa0">
+                Community shares requested <strong>{{ summary.share_offers_investmentTarget|currency }}</strong>
+                and received <strong>{{ summary.equity_value|currency }}</strong>.
+                This leaves a shortfall of <strong>{{ (summary.share_offers_investmentTarget - summary.equity_value)|currency }}</strong>
+                or <strong>{{ "{:,.0%}".format((summary.share_offers_investmentTarget - summary.equity_value) / summary.share_offers_investmentTarget) }}</strong>
+            </p>
+            <p class="mt0 mb0 pa0">
+                *Based on data from {{ comma_list(collections.index) }}
+            </p>
+        </div>
+    </div>
+    <div class="w-third pr3 mb3">
+    </div>
+    <div class="w-third pr3 mb3">
+        <canvas id="deals-by-year" style="width: 100% !important;" height="300">
+            <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+                <thead>
+                    <tr>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Collection</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Year</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for deal_year, y in collections_by_year.iterrows() %}
+                    <tr>
+                        <td class="pv2 ph3">{{ deal_year[0] }}</td>
+                        <td class="pv2 ph3">{{ deal_year[1].year }}</td>
+                        <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                        <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </canvas>
+        {% set by_year = collections_by_year["deal_count"].unstack() %}
+        {% set colours = ['red', 'blue'] %}
+        <script>
+            var dealsByYear = new Chart("deals-by-year", {
+                type: 'line',
+                data: {
+                    labels: {{ by_year.columns.tolist()|tojson }},
+                    datasets: [
+                        {% for fund, data in by_year.iterrows() %}
+                        {
+                            label: {{ fund|tojson }},
+                            data: {{ data.tolist()|tojson }},
+                            fill: false,
+                            lineTension: 0,
+                            pointRadius: 0,
+                            borderWidth: 3,
+                            borderColor: {{ colours[loop.index0]|tojson }},
+                            backgroundColor: {{ colours[loop.index0]|tojson }}
+                        },
+                        {% endfor %}
+                    ]
+                },
+                options: {
+                    scales: {
+                        xAxes: [{
+                            gridLines: {
+                                display: false,
+                            },
+                            ticks: {
+                                fontColor: '#000'
+                            }
+                        }],
+                        yAxes: [{
+                            gridLines: {
+                                display: false,
+                            },
+                            ticks: {
+                                fontColor: '#000',
+                                beginAtZero: true
+                            },
+                            scaleLabel: {
+                                display: true,
+                                labelString: 'Deal count'
+                            }
+                        }]
+                    }
+                }
+            });
+        </script>
+    </div>
+    <div class="w-third pr3 mb3">
+        <canvas id="deals-by-sector" style="width: 100% !important;" height="300">
+            <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+                <thead>
+                    <tr>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Collection</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Sector</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for classification, y in collections_by_classification.iterrows() %}
+                    <tr>
+                        <td class="pv2 ph3">{{ classification[0] }}</td>
+                        <td class="pv2 ph3">{{ classification[1] }}</td>
+                        <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                        <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </canvas>
+        {% set by_sector = collections_by_classification["deal_count"].unstack() %}
+        {% set colours = ['red', 'blue'] %}
+        <script>
+            var dealsByYear = new Chart("deals-by-sector", {
+                type: 'horizontalBar',
+                data: {
+                    labels: {{ by_sector.columns.tolist()|tojson }},
+                    datasets: [
+                        {% for fund, data in by_sector.iterrows() %}
+                        {
+                            label: {{ fund|tojson }},
+                            data: {{ data.tolist()|tojson }},
+                            fill: false,
+                            lineTension: 0,
+                            pointRadius: 0,
+                            borderWidth: 3,
+                            borderColor: {{ colours[loop.index0]|tojson }},
+                            backgroundColor: {{ colours[loop.index0]|tojson }}
+                        },
+                        {% endfor %}
+                    ]
+                },
+                options: {
+                    scales: {
+                        yAxes: [{
+                            gridLines: {
+                                display: false,
+                            },
+                            ticks: {
+                                fontColor: '#000'
+                            }
+                        }],
+                        xAxes: [{
+                            gridLines: {
+                                display: false,
+                            },
+                            ticks: {
+                                fontColor: '#000',
+                                beginAtZero: true
+                            },
+                            scaleLabel: {
+                                display: true,
+                                labelString: 'Deal count'
+                            }
+                        }]
+                    }
+                }
+            });
+        </script>
+    </div>
+ 
+    <div class="w-third pr3 mb3">
+        <div id="heat-map" style='height: 100%;'></div>
+        <script>
+            var mymap = L.map('heat-map', {
+                zoomControl: false
+            }).setView([51.505, -0.09], 13);
+            L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+                maxZoom: 18,
+                id: 'mapbox.streets',
+                accessToken: 'pk.eyJ1IjoiZGF2aWRrYW5lIiwiYSI6ImNqdm5zb2ZveTB5M280MWxlejdxNHRscW4ifQ.iIc5s6Eq9D7xq9IFT39dlQ'
+            }).addTo(mymap);
+            var heat = L.heatLayer([
+                {% for _, d in deals.iterrows() if d.latitude %}
+                [{{ d.latitude }}, {{ d.longitude }}],
+                {% endfor %}
+            ], {blur: 5, minOpacity: 0.3, radius: 10}).addTo(mymap);
+            mymap.fitBounds(L.latLngBounds(heat._latlngs));
+        </script>
+    </div>
+
+   <div class="w-third pr3 mb3">
+        <canvas id="deals-by-status" style="width: 100% !important;" height="300">
+            <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+                <thead>
+                    <tr>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Collection</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Status</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for classification, y in collections_by_status.iterrows() %}
+                    <tr>
+                        <td class="pv2 ph3">{{ classification[0] }}</td>
+                        <td class="pv2 ph3">{{ classification[1] }}</td>
+                        <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                        <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </canvas>
+        {% set by_sector = collections_by_status["deal_count"].unstack() %}
+        {% set colours = ['red', 'blue'] %}
+        <script>
+            var dealsByYear = new Chart("deals-by-status", {
+                type: 'horizontalBar',
+                data: {
+                    labels: {{ by_sector.columns.tolist()|tojson }},
+                    datasets: [
+                        {% for fund, data in by_sector.iterrows() %}
+                        {
+                            label: {{ fund|tojson }},
+                            data: {{ data.tolist()|tojson }},
+                            fill: false,
+                            lineTension: 0,
+                            pointRadius: 0,
+                            borderWidth: 3,
+                            borderColor: {{ colours[loop.index0]|tojson }},
+                            backgroundColor: {{ colours[loop.index0]|tojson }}
+                        },
+                        {% endfor %}
+                    ]
+                },
+                options: {
+                    scales: {
+                        yAxes: [{
+                            gridLines: {
+                                display: false,
+                            },
+                            ticks: {
+                                fontColor: '#000'
+                            }
+                        }],
+                        xAxes: [{
+                            gridLines: {
+                                display: false,
+                            },
+                            ticks: {
+                                fontColor: '#000',
+                                beginAtZero: true
+                            },
+                            scaleLabel: {
+                                display: true,
+                                labelString: 'Deal count'
+                            }
+                        }]
+                    }
+                }
+            });
+        </script>
+    </div>
+
+   <div class="w-third pr3 mb3">
+        <canvas id="deals-by-region" style="width: 100% !important;" height="300">
+            <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+                <thead>
+                    <tr>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Collection</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Region</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                        <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for classification, y in collections_by_region.iterrows() %}
+                    <tr>
+                        <td class="pv2 ph3">{{ classification[0] }}</td>
+                        <td class="pv2 ph3">{{ classification[1] }}</td>
+                        <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                        <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </canvas>
+        {% set by_sector = collections_by_region["deal_count"].unstack() %}
+        {% set colours = ['red', 'blue'] %}
+        <script>
+            var dealsByYear = new Chart("deals-by-region", {
+                type: 'bar',
+                data: {
+                    labels: {{ by_sector.columns.tolist()|tojson }},
+                    datasets: [
+                        {% for fund, data in by_sector.iterrows() %}
+                        {
+                            label: {{ fund|tojson }},
+                            data: {{ data.tolist()|tojson }},
+                            fill: false,
+                            lineTension: 0,
+                            pointRadius: 0,
+                            borderWidth: 3,
+                            borderColor: {{ colours[loop.index0]|tojson }},
+                            backgroundColor: {{ colours[loop.index0]|tojson }}
+                        },
+                        {% endfor %}
+                    ]
+                },
+                options: {
+                    scales: {
+                        xAxes: [{
+                            gridLines: {
+                                display: false,
+                            },
+                            ticks: {
+                                fontColor: '#000'
+                            }
+                        }],
+                        yAxes: [{
+                            gridLines: {
+                                display: false,
+                            },
+                            ticks: {
+                                fontColor: '#000',
+                                beginAtZero: true
+                            },
+                            scaleLabel: {
+                                display: true,
+                                labelString: 'Deal count'
+                            }
+                        }]
+                    }
+                }
+            });
+        </script>
+    </div>
+
+    <div class="w-100">
+        <h3>About our data</h3>
+        <p>
+            {{ lipsum(3) }}
+        </p>
+    </div>
+</div>
+
+
+
+{# <div>
+    <h2>Data collections</h2>
+    {% for collection, c in collections.iterrows() %}
+    <section>
+        <h3>{{ collection }}</h3>
+        <div class="">
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Deals</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.deal_count) }}</p>
+            </div>
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Value</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.deal_value|currency }}</p>
+            </div>
+        </div>
+        {% if c.share_offers %}
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Share offers</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.share_offers) }}</p>
+            </div>
+            {% if c.share_offers_investmentTarget %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Investment sought</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.share_offers_investmentTarget|currency }}</p>
+            </div>
+            {% endif %}
+            {% if c.equity_value %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Investment received</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.equity_value|currency }}</p>
+            </div>
+            {% endif %}
+            {% if c.equity_value and c.share_offers_investmentTarget %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Investment shortfall</p>
+                <p class="f1 pa0 b ma0 tc">{{ (c.share_offers_investmentTarget - c.equity_value)|currency }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if c.equity_count %}
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Deals with equity</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.count_with_equity) }}</p>
+            </div>
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Equity investments</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.equity_count) }}</p>
+            </div>
+            {% if c.equity_value %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Value</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.equity_value|currency }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if c.grant_count %}
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Deals with grants</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.count_with_grant) }}</p>
+            </div>
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Grants</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.grant_count) }}</p>
+            </div>
+            {% if c.grant_value %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Value</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.grant_value|currency }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if c.credit_count %}
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Deals with credit</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.count_with_grant) }}</p>
+            </div>
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Credit</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c.credit_count) }}</p>
+            </div>
+            {% if c.credit_value %}
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Value</p>
+                <p class="f1 pa0 b ma0 tc">{{ c.credit_value|currency }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        <div class="flex flex-wrap mb2">
+            <div class="pa2 tc mr2 bg-blue white br3">
+                <p class="f4 pa0 ma0 tc">Complex deals</p>
+                <p class="f1 pa0 b ma0 tc">{{ "{:,.0f}".format(c["2_or_more_elements"]) }}</p>
+                <p class="f6 pa0 ma0 tc">(deals with 2 or more elements)</p>
+            </div>
+        </div>
+        </div>
+        {% if collection in collections_by_year.index.get_level_values(0) %}
+        <div>
+        <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+            <thead>
+                <tr>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Year</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for deal_year, y in collections_by_year.xs(collection).iterrows() %}
+                <tr>
+                    <td class="pv2 ph3">{{ deal_year.year }}</td>
+                    <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                    <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% endif %}
+        {% if collection in collections_by_classification.index.get_level_values(0) %}
+        <div>
+        <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+            <thead>
+                <tr>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Classification</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for classification, y in collections_by_classification.xs(collection).iterrows() %}
+                <tr>
+                    <td class="pv2 ph3">{{ classification }}</td>
+                    <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                    <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% endif %}
+        {% if collection in collections_by_region.index.get_level_values(0) %}
+        <div>
+        <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+            <thead>
+                <tr>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Region</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for region, y in collections_by_region.xs(collection).iterrows() %}
+                <tr>
+                    <td class="pv2 ph3">{{ region }}</td>
+                    <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                    <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% endif %}
+        {% if collection in collections_by_status.index.get_level_values(0) %}
+        <div>
+        <table class="collapse ba br2 b--black-10 pv2 ph3 mt4">
+            <thead>
+                <tr>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Status</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deals</th>
+                    <th class="pv2 ph3 tl f6 fw6 ttu">Deal value</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for status, y in collections_by_status.xs(collection).iterrows() %}
+                <tr>
+                    <td class="pv2 ph3">{{ status }}</td>
+                    <td class="pv2 ph3 tr">{{ "{:,.0f}".format(y.deal_count) }}</td>
+                    <td class="pv2 ph3 tr">{{ y.deal_value|currency }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% endif %}
+        </div>
+    </section>
+    {% endfor %}
+</div> #}
+{% endblock content %}}

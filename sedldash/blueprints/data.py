@@ -11,9 +11,35 @@ def index():
 
     deals = pd.read_pickle('deals.pkl')
 
+    groups = {}
+
+    groups["Region"] = deals["region"].dropna().unique().tolist()
+    groups["Sector"] = deals["classification"].dropna().unique().tolist()
+    groups["Status"] = deals["deal_status"].dropna().unique().tolist()
+    groups["Year"] = deals["deal_year"].dropna().sort_values().apply(
+        "{:.0f}".format).unique().tolist()
+    groups["Investment type"] = ["Credit", "Grant", "Equity", "Share Offers"]
+    groups["Partner"] = deals["collection"].dropna().unique().tolist()
+
+    return render_template('data.html.j2',
+                           groups=groups,
+                           )
+
+
+@bp.route('/summary')
+def summary():
+
+    deals = pd.read_pickle('deals.pkl')
+
+    deals.loc[:, "deal_year_min"] = deals["deal_year"]
+    deals.loc[:, "deal_year_max"] = deals["deal_year"]
+
     aggregates = {
         "deal_count": "sum",
         "deal_value": "sum",
+        "recipient_id": "nunique",
+        "deal_year_min": "min",
+        "deal_year_max": "max",
         "count_with_share_offers": "sum",
         "share_offers": "sum",
         "share_offers_investmentTarget": "sum",
@@ -29,9 +55,11 @@ def index():
         "2_or_more_elements": "sum",
     }
 
+
+    summary = deals.agg(aggregates)
     collections = deals.groupby(['collection']).agg(aggregates)
     collections_by_year = deals.groupby(
-        ['collection', pd.Grouper(key='deal_date', freq='Y')]).agg(aggregates)
+        ['collection', 'deal_year']).agg(aggregates)
     collections_by_classification = deals.groupby(
         ['collection', 'classification']).agg(aggregates)
     collections_by_region = deals.groupby(
@@ -39,12 +67,14 @@ def index():
     collections_by_status = deals.groupby(
         ['collection', 'deal_status']).agg(aggregates)
 
-    return render_template('data.html.j2',
+    return render_template('summary.html.j2',
+                           summary=summary,
                            collections=collections,
                            collections_by_year=collections_by_year,
                            collections_by_classification=collections_by_classification,
                            collections_by_region=collections_by_region,
                            collections_by_status=collections_by_status,
+                           deals=deals
                           )
 
 
