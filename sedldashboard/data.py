@@ -1,10 +1,15 @@
+import os
 import functools
 
 import pandas as pd
 from slugify import slugify
 
+from app import server
+
 def get_deals():
-    return pd.read_pickle('deals.pkl')
+    return pd.read_pickle(
+        os.path.join(server.config['FILE_LOCATION'], 'deals.pkl')
+    )
 
 
 def get_groups():
