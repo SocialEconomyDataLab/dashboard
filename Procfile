@@ -1,1 +1,1 @@
-web: gunicorn sedldashboard.app:server
+web: gunicorn sedldashboard.index:server
