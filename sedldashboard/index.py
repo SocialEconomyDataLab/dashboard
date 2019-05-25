@@ -3,8 +3,8 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 
-from app import app
-from apps import home, summary
+from .app import app, server
+from .apps import home, summary
 
 
 app.layout = html.Div(className='w-100 sans-serif', children=[

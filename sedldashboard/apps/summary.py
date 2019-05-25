@@ -6,8 +6,8 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 from slugify import slugify
 
-from app import app
-from data import get_groups, get_aggregates, get_filtered_df, currency
+from ..app import app
+from ..data import get_groups, get_aggregates, get_filtered_df, currency
 
 groups = get_groups()
 

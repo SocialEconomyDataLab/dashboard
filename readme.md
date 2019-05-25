@@ -22,7 +22,7 @@ dokku storage:mount sedldash /var/lib/dokku/data/storage/sedldash:/app/storage
 ### Add environmental variables
 
 ```
-dokku config:set sedldash FLASK_APP=ptc_dashboards.app:server
+dokku config:set sedldash FLASK_APP=sedldashboard.app:server
 dokku config:set sedldash FILE_LOCATION=/app/storage
 dokku config:set sedldash AUTH_USERNAME=sedl AUTH_PASSWORD=[PUT PASSWORD HERE]
 ```
@@ -39,6 +39,7 @@ dokku domains:add sedldash sedldash.dkane.net
 ```
 sudo dokku plugin:install https://github.com/dokku/dokku-letsencrypt.git
 dokku config:set --no-restart --global DOKKU_LETSENCRYPT_EMAIL=your@email.tld
+dokku letsencrypt sedldash
 ```
 
 ### Importing deals data

@@ -3,8 +3,8 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 from slugify import slugify
 
-from app import app
-from data import get_groups
+from ..app import app
+from ..data import get_groups
 
 groups = get_groups()
 
