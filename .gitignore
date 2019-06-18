@@ -1,1 +1,5 @@
 *.pkl
+keyfile.json
+*.sqlite
+*.ipynb
+*.xlsx
