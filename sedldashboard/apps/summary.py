@@ -42,12 +42,13 @@ def layout(url):
         ]),
         html.Div(className='fl w-75 pl3 flex flex-wrap', children=[
             html.Div(className='w-two-thirds pr3 mb3', id="data-summary"),
-            html.Div(className='w-third pr3 mb3', id="word-cloud"),
-            html.Div(className='w-third pr3 mb3', id="deals-by-year"),
-            html.Div(className='w-third pr3 mb3', id="deals-by-sector"),
-            html.Div(className='w-third pr3 mb3', id="heat-map"),
-            html.Div(className='w-third pr3 mb3', id="deals-by-status"),
-            html.Div(className='w-third pr3 mb3', id="deals-by-region"),
+            # html.Div(className='w-50 pr3 mb3', id="word-cloud"),
+            html.Div(className='w-50 pr3 mb3', id="deals-by-year"),
+            html.Div(className='w-50 pr3 mb3', id="deals-by-sector"),
+            html.Div(className='w-50 pr3 mb3', id="heat-map"),
+            html.Div(className='w-50 pr3 mb3', id="deals-by-status"),
+            html.Div(className='w-50 pr3 mb3', id="deals-by-region"),
+            html.Div(className='w-50 pr3 mb3', id="deals-by-deprivation"),
             html.Div(className='w-100', id="about-the-data", children=[
                 html.H3(className='', children='About our data'),
                 dcc.Markdown(className='', children='''
@@ -109,7 +110,8 @@ def update_filters(*args):
                Output("deals-by-sector", 'children'),
                Output("heat-map", 'children'),
                Output("deals-by-status", 'children'),
-               Output("deals-by-region", 'children')],
+               Output("deals-by-region", 'children'),
+               Output("deals-by-deprivation", 'children')],
               [Input("filters-used", 'data')])
 def output_charts(filters):
     deals = get_filtered_df(filters)
@@ -136,6 +138,7 @@ def output_charts(filters):
         heat_map(deals),  # heat-map
         deals_by_status(agg),  # deals-by-status
         deals_by_region(agg), # deals-by-region
+        deals_by_deprivation(agg), # deals-by-deprivation
     )
 
 
@@ -146,9 +149,9 @@ def data_summary(agg):
             ' organisations received social investment in ',
             html.Strong("{:,.0f}".format(agg['summary']['deal_count'])),
             ' deals between ',
-            "{:,.0f}".format(agg['summary']['deal_year_min']),
+            "{:.0f}".format(agg['summary']['deal_year_min']),
             ' and ',
-            "{:,.0f}.".format(agg['summary']['deal_year_max']),
+            "{:.0f}.".format(agg['summary']['deal_year_max']),
         ]),
         html.P(className='mt0 mb3 pa0', children=[
             html.Strong(currency(agg['summary']['deal_value'])),
@@ -172,34 +175,14 @@ def data_summary(agg):
                 )
             ]) if agg["summary"]["credit_value"] else None,
             html.Li(className='', children=[
-                html.Strong(currency(agg['summary']['grant_value'])),
+                html.Strong(currency(agg['summary']['grants_value'])),
                 ' of grants ',
                 '({:,.0%} of total social investment)'.format(
-                    agg['summary']['grant_value'] /
+                    agg['summary']['grants_value'] /
                     agg['summary']['deal_value']
                 )
-            ]) if agg["summary"]["grant_value"] else None,
-        ]),
-        html.P(className='mt0 mb3 pa0', children=[
-            'Community shares requested ',
-            html.Strong(currency(agg['summary']['share_offers_investmentTarget'])),
-            ' and received ',
-            html.Strong(currency(agg['summary']['equity_value'])),
-            '. This leaves a shortfall of ',
-            html.Strong(
-                currency(agg['summary']['share_offers_investmentTarget'] - agg['summary']['equity_value'])
-            ),
-            ' or ',
-            html.Strong(
-                "{:,.0%}".format(
-                    (
-                        agg['summary']['share_offers_investmentTarget'] -
-                        agg['summary']['equity_value']
-                    ) / agg['summary']['share_offers_investmentTarget']
-                )
-            ),
-            '.',
-        ]) if agg['summary']['share_offers_investmentTarget'] else None,
+            ]) if agg["summary"]["grants_value"] else None,
+        ]) if (agg['summary']['deal_value'] > 0) else None,
         html.P(className='mt0 mb0 pa0', children=[
             '*Based on data from ',
             ", ".join(agg['collections'].index),
@@ -321,13 +304,48 @@ def deals_by_region(agg):
     )
 
 
+def deals_by_deprivation(agg):
+    data = agg["by_deprivation"]["deal_count"].sort_values(
+        ascending=False).unstack()
+    column_order = sorted(
+        data.columns.tolist(),
+        key=lambda x: float(x.split(" ")[0])
+    )
+    data = data[column_order]
+
+    return dcc.Graph(
+        figure=go.Figure(
+            data=[
+                go.Bar(
+                    x=data.columns.tolist(),
+                    y=d.tolist(),
+                    name=fund,
+                ) for fund, d in data.iterrows()
+            ],
+            layout=go.Layout(
+                title='Deals by deprivation decile',
+                showlegend=True,
+                legend=go.layout.Legend(
+                    x=0,
+                    y=1.0
+                ),
+                xaxis=dict(
+                    type='category',
+                ),
+                margin=go.layout.Margin(l=40, r=0, t=40, b=30)
+            )
+        ),
+        style={'maxHeight': '300px'},
+        id='deals-by-deprivation-fig'
+    )
+
+
 def heat_map(deals):
-    lats = []
-    longs = []
-    for _, d in deals.iterrows():
-        if d['latitude'] and d['longitude']:
-            lats.append(float(d['latitude']))
-            longs.append(float(d['longitude']))
+
+    latlongs = deals.loc[deals['latitude'].apply(
+        type) == float, ['latitude', 'longitude']].dropna(how='any')
+    lats = latlongs.latitude.tolist()
+    longs = latlongs.longitude.tolist()
 
     if not lats:
         return None

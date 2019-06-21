@@ -18,21 +18,30 @@ def get_groups():
 
     groups = {}
 
-    groups["Region"] = deals["region"].dropna().unique().tolist()
-    groups["Sector"] = deals["classification"].dropna().unique().tolist()
-    groups["Status"] = deals["deal_status"].dropna().unique().tolist()
-    groups["Year"] = deals["deal_year"].dropna().sort_values().apply(
+    groups["Region"] = deals["RGN18NM"].dropna(
+    ).sort_values().unique().tolist()
+    groups["Deprivation"] = sorted(
+        deals["imd_decile"].dropna(
+        ).unique().tolist(),
+        key=lambda x: float(x.split(" ")[0])
+    )
+
+    groups["Sector"] = deals["classification"].apply(
+        pd.Series).unstack().dropna().sort_values().unique().tolist()
+    groups["Status"] = deals["status"].dropna().unique().tolist()
+    groups["Year"] = deals["dealDate"].dt.year.dropna().sort_values().apply(
         "{:.0f}".format).unique().tolist()
-    groups["Investment type"] = ["Credit", "Grant", "Equity", "Share Offers"]
-    groups["Partner"] = deals["collection"].dropna().unique().tolist()
+    groups["Investment type"] = ["Credit", "Grant", "Equity"]
+    groups["Partner"] = deals["meta/partner"].dropna().unique().tolist()
 
     return groups
 
 
 def get_aggregates(deals):
 
-    deals.loc[:, "deal_year_min"] = deals["deal_year"]
-    deals.loc[:, "deal_year_max"] = deals["deal_year"]
+    deals.loc[:, "deal_year"] = deals["dealDate"].dt.year
+    deals.loc[:, "deal_year_min"] = deals["dealDate"].dt.year
+    deals.loc[:, "deal_year_max"] = deals["dealDate"].dt.year
 
     aggregates = {
         "deal_count": "sum",
@@ -40,33 +49,38 @@ def get_aggregates(deals):
         "recipient_id": "nunique",
         "deal_year_min": "min",
         "deal_year_max": "max",
-        "count_with_share_offers": "sum",
-        "share_offers": "sum",
-        "share_offers_investmentTarget": "sum",
         "count_with_equity": "sum",
         "equity_count": "sum",
         "equity_value": "sum",
-        "count_with_grant": "sum",
-        "grant_count": "sum",
-        "grant_value": "sum",
+        "count_with_grants": "sum",
+        "grants_count": "sum",
+        "grants_value": "sum",
         "count_with_credit": "sum",
         "credit_count": "sum",
         "credit_value": "sum",
         "2_or_more_elements": "sum",
     }
 
+    by_class = deals["classification"].apply(pd.Series).unstack(level=0).dropna(
+    ).reset_index().join(deals, on='id').set_index(
+        ["id", "level_0"]
+    ).drop(columns=['classification']).rename(
+        columns={0: 'classification'})
+
     return dict(
         summary = deals.agg(aggregates),
         collections = deals.groupby(
-            ['collection']).agg(aggregates),
-        by_year = deals.groupby(
-            ['collection', 'deal_year']).agg(aggregates),
-        by_classification = deals.groupby(
-            ['collection', 'classification']).agg(aggregates),
+            ["meta/partner"]).agg(aggregates),
+        by_year = deals[deals["dealDate"].dt.year > 1980].groupby(
+            ["meta/partner", 'deal_year']).agg(aggregates),
+        by_classification=by_class.groupby(
+            ["meta/partner", 'classification']).agg(aggregates),
         by_region = deals.groupby(
-            ['collection', 'region']).agg(aggregates),
+            ["meta/partner", 'RGN18NM']).agg(aggregates),
+        by_deprivation = deals.groupby(
+            ["meta/partner", 'imd_decile']).agg(aggregates),
         by_status = deals.groupby(
-            ['collection', 'deal_status']).agg(aggregates),
+            ["meta/partner", 'status']).agg(aggregates),
     )
 
 
@@ -81,19 +95,23 @@ def get_filtered_df(filters):
         
         if k=="region":
             deals = deals[
-                deals["region"].apply(slugify).isin(v)
+                deals["RGN18NM"].fillna('None').apply(slugify).isin(v)
             ]
         elif k=="status":
             deals = deals[
-                deals["deal_status"].apply(slugify).isin(v)
+                deals["status"].fillna('None').apply(slugify).isin(v)
+            ]
+        elif k == "deprivation":
+            deals = deals[
+                deals["imd_decile"].fillna('None').apply(slugify).isin(v)
             ]
         elif k=="sector":
-            deals = deals[
-                deals["classification"].fillna('None').apply(slugify).isin(v)
-            ]
+            class_filter = deals["classification"].apply(
+                pd.Series).unstack().dropna().apply(slugify).isin(v)
+            deals = deals.loc[class_filter.index.get_level_values(1), :]
         elif k=="partner":
             deals = deals[
-                deals["collection"].fillna('None').apply(slugify).isin(v)
+                deals["meta/partner"].fillna('None').apply(slugify).isin(v)
             ]
         elif k=="investment-type":
             CritList = []
@@ -103,8 +121,6 @@ def get_filtered_df(filters):
                 CritList.append(deals["grant_count"].gt(0))
             if "equity" in v:
                 CritList.append(deals["equity_count"].gt(0))
-            if "share-offers" in v:
-                CritList.append(deals["share_offers"].gt(0))
             if CritList:
                 AllCrit = functools.reduce(lambda x, y: x | y, CritList)
                 deals = deals[AllCrit]
