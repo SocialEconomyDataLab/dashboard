@@ -49,3 +49,16 @@ Move files to server
 ```
 scp source_data/deals.pkl root@ip-address:/var/lib/dokku/data/storage/sedldash/deals.pkl
 ```
+
+
+## Other data sources
+
+### SIC codes
+
+From <https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/ukstandardindustrialclassificationofeconomicactivities/uksic2007/sic2007summaryofstructurtcm6.xls>.
+
+### LSOA data
+
+- [LSOA to Ward and Local Authority](https://geoportal.statistics.gov.uk/datasets/lower-layer-super-output-area-2011-to-ward-2018-lookup-in-england-and-wales-v3/data)
+- [LA to Region](https://geoportal.statistics.gov.uk/datasets/local-authority-district-to-region-december-2018-lookup-in-england)
+- [IMD deciles](http://opendatacommunities.org/slice?dataset=http%3A%2F%2Fopendatacommunities.org%2Fdata%2Fsocietal-wellbeing%2Fimd%2Findices&http%3A%2F%2Fopendatacommunities.org%2Fdef%2Fontology%2Fcommunities%2Fsocietal_wellbeing%2Fimd%2Findices=http%3A%2F%2Fopendatacommunities.org%2Fdef%2Fconcept%2Fgeneral-concepts%2Fimd%2Fcombineddeprivation&http%3A%2F%2Fpurl.org%2Flinked-data%2Fcube%23measureType=http%3A%2F%2Fopendatacommunities.org%2Fdef%2Fontology%2Fcommunities%2Fsocietal_wellbeing%2Fimd%2FdecObs) (England only)

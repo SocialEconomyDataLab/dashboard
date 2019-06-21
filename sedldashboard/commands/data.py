@@ -233,44 +233,6 @@ def createDealDataframe(df, siccodes, lsoa):
 
     return dealdf
 
-
-def getSicIndex():
-    sic = pd.read_csv("sic_corrected.csv", dtype=str).set_index('siccode')
-    return sic
-
-# SIC_URL = "https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/ukstandardindustrialclassificationofeconomicactivities/uksic2007/sic2007summaryofstructurtcm6.xls"
-# def getSicIndex(url):
-#     r = requests.get(url)
-#     r.raise_for_status()
-#     sic = pd.read_excel(
-#         io.BytesIO(r.content),
-#         header=1,
-#         dtype=str
-#     )
-#     sic.columns = [
-#         "section_code", "section_name",
-#         "division_code", "division_name",
-#         "group_code", "group_name",
-#         "class_code", "class_name",
-#         "subclass_code", "subclass_name",
-#     ]
-#     sic = sic.dropna(how='all')
-#     for i in [
-#         "section_code", "section_name",
-#         "division_code", "division_name",
-#         "group_code", "group_name",
-#         #     "class_code", "class_name",
-#     ]:
-#         sic.loc[:, i] = sic[i].ffill()
-#     sic = sic[sic.class_code.notnull() | sic.subclass_code.notnull()]
-#     for i in ["class_code", "class_name"]:
-#         sic.loc[:, i] = sic[i].ffill()
-#     sic.loc[:, "siccode"] = sic.subclass_code.str.replace("[^0-9]", "").fillna(
-#         sic.class_code.str.replace("[^0-9]", "").apply("{}0".format)
-#     )
-#     sic = sic.set_index("siccode")
-#     return sic
-
  
 def fixSic(siccodes, siccodeslookup):
     if not siccodes or (isinstance(siccodes, float) and pd.np.isnan(siccodes)):
@@ -305,10 +267,12 @@ def import_data(keyfile, sheet, output):
         output = current_app.config['FILE_LOCATION']
 
     # load the external resources we need (LSOAs and SIC)
-    sic = getSicIndex()
-    lsoa = pd.read_csv("lsoa.csv", index_col='LSOA11CD',
-                       dtype={"imd_decile": str})
-    current_app.logger.info('LSOA and SIC lookups fetched')
+    lsoa = pd.read_csv(os.path.join(
+        "external_data","lsoa.csv"), index_col='LSOA11CD', dtype=str)
+    current_app.logger.info('LSOA lookup fetched (%d records)', len(lsoa))
+    sic = pd.read_csv(os.path.join(
+        "external_data", "sic_corrected.csv"), dtype=str).set_index('siccode')
+    current_app.logger.info('SIC lookup fetched (%d records)', len(sic))
 
     # set up google sheets so we can use it
     current_app.logger.info('Authenticating with Google sheets')
@@ -327,7 +291,7 @@ def import_data(keyfile, sheet, output):
     # go through each file and extract the data that we need
     for f in files:
         current_app.logger.info(
-            'Fetching data for %s', f['Partner'])
+            'Fetching data for "%s"', f['Partner'])
         current_app.logger.info(f['URL'])
         filename = hashlib.sha256(f['URL'].encode('utf-8')).hexdigest()[0:10]
         df = loadGoogleSheets(gc, f['URL'], 'Deals', columnList=None)
@@ -336,7 +300,9 @@ def import_data(keyfile, sheet, output):
         pkl_location = os.path.join(output, "{}.pkl".format(filename))
         df.to_pickle(pkl_location)
         current_app.logger.info(
-            'Fetched and transformed data for %s and saved to %s', f['Partner'], pkl_location)
+            'Fetched and transformed %d deals for "%s"', len(df), f['Partner'])
+        current_app.logger.info(
+            'Saved to [%s]', pkl_location)
         deals.append(df)
 
     # concatenate this into one file
@@ -355,7 +321,8 @@ def import_data(keyfile, sheet, output):
         'recipientOrganization/location/0/latitude': 'latitude',
         'recipientOrganization/location/0/longitude': 'longitude',
     })
+    current_app.logger.info('%d deals processed', len(df))
 
     pkl_location = os.path.join(output, "deals.pkl")
     deals.to_pickle(pkl_location)
-    current_app.logger.info('Deals file saved to %s', pkl_location)
+    current_app.logger.info('Deals file saved to [%s]', pkl_location)

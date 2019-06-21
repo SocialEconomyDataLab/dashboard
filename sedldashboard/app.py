@@ -4,7 +4,7 @@ import dash
 import dash_auth
 from flask import Flask
 
-from .commands.data_import import data_cli
+from .commands.data import data_cli
 
 server = Flask(__name__)
 
