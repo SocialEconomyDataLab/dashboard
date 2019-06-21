@@ -210,7 +210,7 @@ def deals_by_year(agg):
                 margin=go.layout.Margin(l=40, r=0, t=40, b=30)
             )
         ),
-        style={'maxHeight': '300px'},
+        style={'maxHeight': '450px'},
         id='deals-by-year-fig'
     )
 
@@ -240,7 +240,7 @@ def deals_by_sector(agg):
                 margin=go.layout.Margin(l=40, r=0, t=40, b=30)
             )
         ),
-        style={'maxHeight': '300px'},
+        style={'maxHeight': '450px'},
         id='deals-by-sector-fig'
     )
 
@@ -270,7 +270,7 @@ def deals_by_status(agg):
                 margin=go.layout.Margin(l=40, r=0, t=40, b=30)
             )
         ),
-        style={'maxHeight': '300px'},
+        style={'maxHeight': '450px'},
         id='deals-by-status-fig'
     )
 
@@ -299,7 +299,7 @@ def deals_by_region(agg):
                 margin=go.layout.Margin(l=40, r=0, t=40, b=30)
             )
         ),
-        style={'maxHeight': '300px'},
+        style={'maxHeight': '450px'},
         id='deals-by-region-fig'
     )
 
@@ -335,7 +335,7 @@ def deals_by_deprivation(agg):
                 margin=go.layout.Margin(l=40, r=0, t=40, b=30)
             )
         ),
-        style={'maxHeight': '300px'},
+        style={'maxHeight': '450px'},
         id='deals-by-deprivation-fig'
     )
 
@@ -378,7 +378,7 @@ def heat_map(deals):
                 margin=go.layout.Margin(l=0, r=0, t=0, b=0)
             )
         ),
-        style={'maxHeight': '300px'},
+        style={'maxHeight': '450px'},
         id='heat-map-fig'
     )
 
