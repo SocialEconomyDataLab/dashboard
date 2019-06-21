@@ -4,6 +4,10 @@ import io
 import os
 import hashlib
 
+import click
+from flask import Flask, current_app
+from flask.cli import AppGroup, with_appcontext
+
 import gspread  # To access the google configuration sheet and raw data files
 import pandas as pd  # To load and change data tables
 # To connect to google drive
@@ -12,6 +16,8 @@ import requests
 
 import requests_cache
 requests_cache.install_cache()
+
+data_cli = AppGroup('data')
 
 # Limits the services that our service account can access
 GOOGLE_SCOPE = ['https://spreadsheets.google.com/feeds',
@@ -282,44 +288,67 @@ def fixSic(siccodes, siccodeslookup):
     return list(to_return)
 
 
-if __name__ == "__main__":
+@data_cli.command('import')
+@click.option('-k', '--keyfile', default=None, help='Location of JSON keyfile containing credentials to access the spreadsheet')
+@click.option('-s', '--sheet', default=None, help='URL of google sheet containing a list of files to include')
+@click.option('-o', '--output', default=None, help='Location where the files will be stored')
+@with_appcontext
+def import_data(keyfile, sheet, output):
 
-    parser = argparse.ArgumentParser(description='Import data from a google spreadsheet in the SEDL data format')
-    parser.add_argument('keyfile', help='Location of JSON keyfile containing credentials to access the spreadsheet')
-    parser.add_argument('--sheet',
-        default='https://docs.google.com/spreadsheets/d/1WVnY5nK7ji5TaVZYcOTexuiekyFLyPfMvFC2kh2Ogp4/edit#gid=0',
-        help='URL of google sheet containing a list of files to include'
-    )
-    parser.add_argument('--output', default=os.environ.get('FILE_LOCATION',
-                                                           'data'), help='Location where the files will be stored')
-    parser.add_argument('--partner', help='Name of the SEDL publisher')
+    # set up parameters if not included
+    if keyfile is None:
+        keyfile = os.path.join(
+            current_app.config['FILE_LOCATION'], 'keyfile.json')
+    if sheet is None:
+        sheet = current_app.config['IMPORT_FILE']
+    if output is None:
+        output = current_app.config['FILE_LOCATION']
 
-    args = parser.parse_args()
-
+    # load the external resources we need (LSOAs and SIC)
     sic = getSicIndex()
     lsoa = pd.read_csv("lsoa.csv", index_col='LSOA11CD',
                        dtype={"imd_decile": str})
-    gc = getGoogleSheets(args.keyfile)
+    current_app.logger.info('LSOA and SIC lookups fetched')
 
-    spreadsheet = gc.open_by_url(args.sheet)
-    sheet = spreadsheet.get_worksheet(0)
-    files = sheet.get_all_records()
+    # set up google sheets so we can use it
+    current_app.logger.info('Authenticating with Google sheets')
+    gc = getGoogleSheets(keyfile)
+    current_app.logger.info('Success')
+
+    # fetch the partners and URLs from the sheet
+    current_app.logger.info('Opening file location spreadsheet')
+    spreadsheet = gc.open_by_url(sheet)
+    sheet_ = spreadsheet.get_worksheet(0)
+    files = sheet_.get_all_records()
+    current_app.logger.info('Loaded %d records from file location sheet', len(files))
 
     deals = []
 
+    # go through each file and extract the data that we need
     for f in files:
+        current_app.logger.info(
+            'Fetching data for %s', f['Partner'])
+        current_app.logger.info(f['URL'])
         filename = hashlib.sha256(f['URL'].encode('utf-8')).hexdigest()[0:10]
         df = loadGoogleSheets(gc, f['URL'], 'Deals', columnList=None)
         df = processDataframe(df, f['Partner'])
         df = createDealDataframe(df, sic, lsoa)
-        df.to_pickle(os.path.join(args.output, "{}.pkl").format(filename))
+        pkl_location = os.path.join(output, "{}.pkl".format(filename))
+        df.to_pickle(pkl_location)
+        current_app.logger.info(
+            'Fetched and transformed data for %s and saved to %s', f['Partner'], pkl_location)
         deals.append(df)
 
+    # concatenate this into one file
+    current_app.logger.info('Concatenating into one file')
     deals = pd.concat(deals)
 
+    # add a dummy deal count variable
     deals.loc[:, "deal_count"] = 1
+    # fill in the recipient name where the ID isn't available
     deals.loc[:, "recipientOrganization/id"] = deals["recipientOrganization/id"].fillna(
         deals["recipientOrganization/name"])
+    # change some variable names to make the dashboard work
     deals = deals.rename(columns={
         "value": "deal_value",
         "recipientOrganization/id": "recipient_id",
@@ -327,4 +356,6 @@ if __name__ == "__main__":
         'recipientOrganization/location/0/longitude': 'longitude',
     })
 
-    deals.to_pickle(os.path.join(args.output, "deals.pkl"))
+    pkl_location = os.path.join(output, "deals.pkl")
+    deals.to_pickle(pkl_location)
+    current_app.logger.info('Deals file saved to %s', pkl_location)
