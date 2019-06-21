@@ -54,7 +54,7 @@ scp path/to/keyfile.json root@ip-address:/var/lib/dokku/data/storage/sedldash/ke
 Run the import command
 
 ```
-dokku run flask data import
+dokku run sedldash flask data import
 ```
 
 ## Other data sources
