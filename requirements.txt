@@ -15,6 +15,7 @@ Flask-Compress==1.4.0
 Flask-SeaSurf==0.2.2
 Flask-SQLAlchemy==2.3.2
 gspread==3.1.0
+gunicorn==19.9.0
 httplib2==0.13.0
 idna==2.8
 ipython-genutils==0.2.0
