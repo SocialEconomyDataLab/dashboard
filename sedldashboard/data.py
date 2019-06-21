@@ -107,7 +107,8 @@ def get_filtered_df(filters):
             ]
         elif k=="sector":
             class_filter = deals["classification"].apply(
-                pd.Series).unstack().dropna().apply(slugify).isin(v)
+                pd.Series).unstack().dropna().apply(slugify)
+            class_filter = class_filter[class_filter.isin(v)]
             deals = deals.loc[class_filter.index.get_level_values(1), :]
         elif k=="partner":
             deals = deals[
