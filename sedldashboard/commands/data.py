@@ -250,6 +250,11 @@ def fixSic(siccodes, siccodeslookup):
     return list(to_return)
 
 
+def logitem(s, *args):
+    current_app.logger.info(s, *args)
+    print(s, *args)
+
+
 @data_cli.command('import')
 @click.option('-k', '--keyfile', default=None, help='Location of JSON keyfile containing credentials to access the spreadsheet')
 @click.option('-s', '--sheet', default=None, help='URL of google sheet containing a list of files to include')
@@ -269,44 +274,44 @@ def import_data(keyfile, sheet, output):
     # load the external resources we need (LSOAs and SIC)
     lsoa = pd.read_csv(os.path.join(
         "external_data","lsoa.csv"), index_col='LSOA11CD', dtype=str)
-    current_app.logger.info('LSOA lookup fetched (%d records)', len(lsoa))
+    logitem('LSOA lookup fetched (%d records)', len(lsoa))
     sic = pd.read_csv(os.path.join(
         "external_data", "sic_corrected.csv"), dtype=str).set_index('siccode')
-    current_app.logger.info('SIC lookup fetched (%d records)', len(sic))
+    logitem('SIC lookup fetched (%d records)', len(sic))
 
     # set up google sheets so we can use it
-    current_app.logger.info('Authenticating with Google sheets')
+    logitem('Authenticating with Google sheets')
     gc = getGoogleSheets(keyfile)
-    current_app.logger.info('Success')
+    logitem('Success')
 
     # fetch the partners and URLs from the sheet
-    current_app.logger.info('Opening file location spreadsheet')
+    logitem('Opening file location spreadsheet')
     spreadsheet = gc.open_by_url(sheet)
     sheet_ = spreadsheet.get_worksheet(0)
     files = sheet_.get_all_records()
-    current_app.logger.info('Loaded %d records from file location sheet', len(files))
+    logitem('Loaded %d records from file location sheet', len(files))
 
     deals = []
 
     # go through each file and extract the data that we need
     for f in files:
-        current_app.logger.info(
+        logitem(
             'Fetching data for "%s"', f['Partner'])
-        current_app.logger.info(f['URL'])
+        logitem(f['URL'])
         filename = hashlib.sha256(f['URL'].encode('utf-8')).hexdigest()[0:10]
         df = loadGoogleSheets(gc, f['URL'], 'Deals', columnList=None)
         df = processDataframe(df, f['Partner'])
         df = createDealDataframe(df, sic, lsoa)
         pkl_location = os.path.join(output, "{}.pkl".format(filename))
         df.to_pickle(pkl_location)
-        current_app.logger.info(
+        logitem(
             'Fetched and transformed %d deals for "%s"', len(df), f['Partner'])
-        current_app.logger.info(
+        logitem(
             'Saved to [%s]', pkl_location)
         deals.append(df)
 
     # concatenate this into one file
-    current_app.logger.info('Concatenating into one file')
+    logitem('Concatenating into one file')
     deals = pd.concat(deals)
 
     # add a dummy deal count variable
@@ -321,8 +326,9 @@ def import_data(keyfile, sheet, output):
         'recipientOrganization/location/0/latitude': 'latitude',
         'recipientOrganization/location/0/longitude': 'longitude',
     })
-    current_app.logger.info('%d deals processed', len(df))
+    logitem('%d deals processed', len(df))
+    logitem('%d deals processed', len(df))
 
     pkl_location = os.path.join(output, "deals.pkl")
     deals.to_pickle(pkl_location)
-    current_app.logger.info('Deals file saved to [%s]', pkl_location)
+    logitem('Deals file saved to [%s]', pkl_location)
