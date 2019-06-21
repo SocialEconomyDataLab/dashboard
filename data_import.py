@@ -1,6 +1,8 @@
 import json
 import argparse
 import io
+import os
+import hashlib
 
 import gspread  # To access the google configuration sheet and raw data files
 import pandas as pd  # To load and change data tables
@@ -14,7 +16,6 @@ requests_cache.install_cache()
 # Limits the services that our service account can access
 GOOGLE_SCOPE = ['https://spreadsheets.google.com/feeds',
                'https://www.googleapis.com/auth/drive']
-SIC_URL = "https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/ukstandardindustrialclassificationofeconomicactivities/uksic2007/sic2007summaryofstructurtcm6.xls"
 
 def getGoogleSheets(keyfile):
     # Logging into Google Drive and Google Sheets
@@ -38,12 +39,6 @@ def loadGoogleSheets(gc, googleSheet, sheetName, columnList=None):
         df = pd.DataFrame(sheet.get_all_records())
         if columnList is not None:
             df = df[columnList]
-        df = df.drop(df.index[0:5])
-        if '' in list(df):
-            df = df.drop('', axis=1)
-
-        # remove lines with no ID
-        df = df[df["id"].notnull() & (df["id"]!='')]
     except Exception as errorMessage:
         errorMessage = 'Error - loadGSDataFrame:' + str(errorMessage)
         print(errorMessage)
@@ -54,6 +49,16 @@ def processDataframe(df, sedlPartner):
     newdf = pd.DataFrame()
     if df is None:
         return
+
+    # remove first five lines of the data
+    df = df.drop(df.index[0:5])
+
+    # remove any blank columns
+    if '' in list(df):
+        df = df.drop('', axis=1)
+
+    # remove lines with no ID
+    df = df[df["id"].notnull() & (df["id"] != '')]
 
     # Get info for dashboard
     df.loc[:, 'meta/partner'] = sedlPartner
@@ -73,6 +78,9 @@ def processDataframe(df, sedlPartner):
         'recipientOrganization/id', # Deal - One per deal
         'recipientOrganization/name', # Deal - One per deal
         'recipientOrganization/location/0/postCode', # Deal - One per deal
+        'recipientOrganization/location/0/geoCode', # Deal - One per deal
+        'recipientOrganization/location/0/latitude', # Deal - One per deal
+        'recipientOrganization/location/0/longitude', # Deal - One per deal
 
         # Arranging organisation
         'arrangingOrganization/id', # Deal - One per deal
@@ -138,13 +146,16 @@ def processDataframe(df, sedlPartner):
 
     return newdf
 
-def createDealDataframe(df, siccodes):
+def createDealDataframe(df, siccodes, lsoa):
     # Create deal dataframe by taking one value for each deal ID
     # Take into account status but dont sum the value
     dealdf = df[(df['status'].notnull())].groupby(['id']).last()[[
         'meta/partner', 'status', 'value', 'estimatedValue', 'dealDate',
         'recipientOrganization/id', 'recipientOrganization/name', 
         'recipientOrganization/location/0/postCode',
+        'recipientOrganization/location/0/geoCode',
+        'recipientOrganization/location/0/latitude',
+        'recipientOrganization/location/0/longitude',
         'recipientOrganization/industryClassifications',
         'arrangingOrganization/id', 'arrangingOrganization/name',
     ]]  
@@ -167,18 +178,26 @@ def createDealDataframe(df, siccodes):
             (dealdf.value.notnull()), 'value'] = None
 
     # add industrial classification
-    print(dealdf['recipientOrganization/industryClassifications']
-          .apply(lambda x: fixSic(x, siccodes)))
     dealdf.loc[:,
                'recipientOrganization/industryClassifications'
                ] = dealdf['recipientOrganization/industryClassifications'].apply(lambda x: fixSic(x, siccodes))
 
     # add other classifications
     prjclassdf = df[['id', 'projects/0/classification/0/title']
-                    ].drop_duplicates(keep='first').groupby("id")['projects/0/classification/0/title'].apply(list)
+                    ].drop_duplicates(keep='first').groupby("id")['projects/0/classification/0/title'].apply(list).apply(lambda x: [i for i in x if isinstance(i, str)])
     dealdf = dealdf.join(prjclassdf)
 
-    for i in ['credit', 'equity', 'grants']:
+    # merge the classifications
+    dealdf.loc[:, "classification"] = dealdf[
+        ["recipientOrganization/industryClassifications",
+            "projects/0/classification/0/title"]
+    ].apply(lambda x: x["recipientOrganization/industryClassifications"] + x["projects/0/classification/0/title"], axis=1)
+    dealdf = dealdf.drop(columns=["recipientOrganization/industryClassifications",
+                                  "projects/0/classification/0/title"])
+
+    # add counts for credit equity and grants
+    elements = ['credit', 'equity', 'grants']
+    for i in elements:
         prefix = 'investments/{}/0/'.format(i)
         invdf = df[df[prefix + 'id'].notnull()].groupby(
             ['id', prefix + 'id']
@@ -196,45 +215,59 @@ def createDealDataframe(df, siccodes):
             prefix + 'id': '{}_count'.format(i),
             prefix + 'value': '{}_value'.format(i)
         })
+        invgb.loc[:, "count_with_{}".format(i)] = 0
+        invgb.loc[invgb['{}_count'.format(i)]>0, "count_with_{}".format(i)] = 1
         dealdf = dealdf.join(invgb)
+
+    dealdf.loc[:, "2_or_more_elements"] = dealdf[[
+        "count_with_{}".format(i) for i in elements]].fillna(0).sum(axis=1) > 1
+
+    # add geodata from lsoas
+    dealdf = dealdf.join(lsoa, on='recipientOrganization/location/0/geoCode')
 
     return dealdf
 
-def getSicIndex(url):
-    r = requests.get(url)
-    r.raise_for_status()
-    sic = pd.read_excel(
-        io.BytesIO(r.content),
-        header=1,
-        dtype=str
-    )
-    sic.columns = [
-        "section_code", "section_name",
-        "division_code", "division_name",
-        "group_code", "group_name",
-        "class_code", "class_name",
-        "subclass_code", "subclass_name",
-    ]
-    sic = sic.dropna(how='all')
-    for i in [
-        "section_code", "section_name",
-        "division_code", "division_name",
-        "group_code", "group_name",
-        #     "class_code", "class_name",
-    ]:
-        sic.loc[:, i] = sic[i].ffill()
-    sic = sic[sic.class_code.notnull() | sic.subclass_code.notnull()]
-    for i in ["class_code", "class_name"]:
-        sic.loc[:, i] = sic[i].ffill()
-    sic.loc[:, "siccode"] = sic.subclass_code.str.replace("[^0-9]", "").fillna(
-        sic.class_code.str.replace("[^0-9]", "").apply("{}0".format)
-    )
-    sic = sic.set_index("siccode")
+
+def getSicIndex():
+    sic = pd.read_csv("sic_corrected.csv", dtype=str).set_index('siccode')
     return sic
+
+# SIC_URL = "https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/ukstandardindustrialclassificationofeconomicactivities/uksic2007/sic2007summaryofstructurtcm6.xls"
+# def getSicIndex(url):
+#     r = requests.get(url)
+#     r.raise_for_status()
+#     sic = pd.read_excel(
+#         io.BytesIO(r.content),
+#         header=1,
+#         dtype=str
+#     )
+#     sic.columns = [
+#         "section_code", "section_name",
+#         "division_code", "division_name",
+#         "group_code", "group_name",
+#         "class_code", "class_name",
+#         "subclass_code", "subclass_name",
+#     ]
+#     sic = sic.dropna(how='all')
+#     for i in [
+#         "section_code", "section_name",
+#         "division_code", "division_name",
+#         "group_code", "group_name",
+#         #     "class_code", "class_name",
+#     ]:
+#         sic.loc[:, i] = sic[i].ffill()
+#     sic = sic[sic.class_code.notnull() | sic.subclass_code.notnull()]
+#     for i in ["class_code", "class_name"]:
+#         sic.loc[:, i] = sic[i].ffill()
+#     sic.loc[:, "siccode"] = sic.subclass_code.str.replace("[^0-9]", "").fillna(
+#         sic.class_code.str.replace("[^0-9]", "").apply("{}0".format)
+#     )
+#     sic = sic.set_index("siccode")
+#     return sic
 
  
 def fixSic(siccodes, siccodeslookup):
-    if not siccodes:
+    if not siccodes or (isinstance(siccodes, float) and pd.np.isnan(siccodes)):
         return []
     siccodes = str(siccodes).split(",")
     to_return = set()
@@ -244,8 +277,8 @@ def fixSic(siccodes, siccodeslookup):
             s = s + "/0"
         s = s.replace(".", '').replace("/", "").zfill(5)
         if s in siccodeslookup.index:
-            s = siccodeslookup.loc[s, "section_name"]
-        to_return.add(s)
+            s = siccodeslookup.loc[s, "name"]
+            to_return.add(s)
     return list(to_return)
 
 
@@ -253,18 +286,45 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Import data from a google spreadsheet in the SEDL data format')
     parser.add_argument('keyfile', help='Location of JSON keyfile containing credentials to access the spreadsheet')
-    parser.add_argument('sheet', help='URL or id of google sheet with data')
+    parser.add_argument('--sheet',
+        default='https://docs.google.com/spreadsheets/d/1WVnY5nK7ji5TaVZYcOTexuiekyFLyPfMvFC2kh2Ogp4/edit#gid=0',
+        help='URL of google sheet containing a list of files to include'
+    )
+    parser.add_argument('--output', default=os.environ.get('FILE_LOCATION',
+                                                           'data'), help='Location where the files will be stored')
     parser.add_argument('--partner', help='Name of the SEDL publisher')
-    parser.add_argument('--sicurl', help='Spreadsheet with list of SIC codes', default=SIC_URL)
 
     args = parser.parse_args()
 
-    sic = getSicIndex(args.sicurl)
+    sic = getSicIndex()
+    lsoa = pd.read_csv("lsoa.csv", index_col='LSOA11CD',
+                       dtype={"imd_decile": str})
     gc = getGoogleSheets(args.keyfile)
-    df = loadGoogleSheets(gc, args.sheet, 'Deals', columnList=None)
-    df = processDataframe(df, args.partner)
-    df = createDealDataframe(df, sic)
-    print(df)
-    # print(df['recipientOrganization/industryClassifications'])
-    print(df.dtypes)
-    df.to_pickle("df.pkl")
+
+    spreadsheet = gc.open_by_url(args.sheet)
+    sheet = spreadsheet.get_worksheet(0)
+    files = sheet.get_all_records()
+
+    deals = []
+
+    for f in files:
+        filename = hashlib.sha256(f['URL'].encode('utf-8')).hexdigest()[0:10]
+        df = loadGoogleSheets(gc, f['URL'], 'Deals', columnList=None)
+        df = processDataframe(df, f['Partner'])
+        df = createDealDataframe(df, sic, lsoa)
+        df.to_pickle(os.path.join(args.output, "{}.pkl").format(filename))
+        deals.append(df)
+
+    deals = pd.concat(deals)
+
+    deals.loc[:, "deal_count"] = 1
+    deals.loc[:, "recipientOrganization/id"] = deals["recipientOrganization/id"].fillna(
+        deals["recipientOrganization/name"])
+    deals = deals.rename(columns={
+        "value": "deal_value",
+        "recipientOrganization/id": "recipient_id",
+        'recipientOrganization/location/0/latitude': 'latitude',
+        'recipientOrganization/location/0/longitude': 'longitude',
+    })
+
+    deals.to_pickle(os.path.join(args.output, "deals.pkl"))
