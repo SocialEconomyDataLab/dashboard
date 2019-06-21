@@ -8,7 +8,7 @@
 dokku apps:create sedldash
 ```
 
-### Add persistent storage for sqlite db
+### Add persistent storage
 
 [Persistant storage docs](https://github.com/dokku/dokku/blob/master/docs/advanced-usage/persistent-storage.md)
 
@@ -25,6 +25,7 @@ dokku storage:mount sedldash /var/lib/dokku/data/storage/sedldash:/app/storage
 dokku config:set sedldash FLASK_APP=sedldashboard.app:server
 dokku config:set sedldash FILE_LOCATION=/app/storage
 dokku config:set sedldash AUTH_USERNAME=sedl AUTH_PASSWORD=[PUT PASSWORD HERE]
+dokku config:set sedldash IMPORT_FILE=https://docs.google.com/spreadsheets/d/1WVnY5nK7ji5TaVZYcOTexuiekyFLyPfMvFC2kh2Ogp4/edit#gid=0
 ```
 
 ### Add domain name
@@ -44,12 +45,17 @@ dokku letsencrypt sedldash
 
 ### Importing deals data
 
-Move files to server
+Copy the Google authentication keyfile to the server (this allows access to the Google drive files)
 
 ```
-scp source_data/deals.pkl root@ip-address:/var/lib/dokku/data/storage/sedldash/deals.pkl
+scp path/to/keyfile.json root@ip-address:/var/lib/dokku/data/storage/sedldash/keyfile.json
 ```
 
+Run the import command
+
+```
+dokku run flask data import
+```
 
 ## Other data sources
 
