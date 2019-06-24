@@ -220,6 +220,12 @@ def deals_by_year(agg):
                     x=0,
                     y=1.0
                 ),
+                xaxis=dict(
+                    automargin=True,
+                ),
+                yaxis=dict(
+                    automargin=True,
+                ),
                 margin=go.layout.Margin(l=40, r=0, t=40, b=30)
             )
         ),
@@ -230,7 +236,7 @@ def deals_by_year(agg):
 def deals_by_sector(agg):
     data = agg["by_classification"]["deal_count"].sort_values(
         ascending=False).unstack()
-    column_order = data.sum().sort_values().index
+    column_order = data.sum().sort_values().tail(10).index
     data = data[column_order]
 
     return dcc.Graph(
@@ -249,6 +255,12 @@ def deals_by_sector(agg):
                 legend=go.layout.Legend(
                     x=0,
                     y=1.0
+                ),
+                xaxis=dict(
+                    automargin=True,
+                ),
+                yaxis=dict(
+                    automargin=True,
                 ),
                 margin=go.layout.Margin(l=40, r=0, t=40, b=30)
             )
@@ -279,6 +291,12 @@ def deals_by_status(agg):
                 legend=go.layout.Legend(
                     x=0,
                     y=1.0
+                ),
+                xaxis=dict(
+                    automargin=True,
+                ),
+                yaxis=dict(
+                    automargin=True,
                 ),
                 margin=go.layout.Margin(l=40, r=0, t=40, b=30)
             )
@@ -346,6 +364,12 @@ def deals_by_region(agg):
                     x=0,
                     y=1.0
                 ),
+                xaxis=dict(
+                    automargin=True,
+                ),
+                yaxis=dict(
+                    automargin=True,
+                ),
                 margin=go.layout.Margin(l=40, r=0, t=40, b=30)
             )
         ),
@@ -381,6 +405,10 @@ def deals_by_deprivation(agg):
                 ),
                 xaxis=dict(
                     type='category',
+                    automargin=True,
+                ),
+                yaxis=dict(
+                    automargin=True,
                 ),
                 margin=go.layout.Margin(l=40, r=0, t=40, b=30)
             )
