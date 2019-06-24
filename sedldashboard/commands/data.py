@@ -14,9 +14,6 @@ import pandas as pd  # To load and change data tables
 from oauth2client.service_account import ServiceAccountCredentials
 import requests
 
-import requests_cache
-requests_cache.install_cache()
-
 data_cli = AppGroup('data')
 
 # Limits the services that our service account can access
