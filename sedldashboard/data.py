@@ -31,7 +31,7 @@ def get_groups():
     groups["Status"] = deals["status"].dropna().unique().tolist()
     groups["Year"] = deals.loc[deals["dealDate"].dt.year > 1980, "dealDate"].dt.year.dropna().sort_values().apply(
         "{:.0f}".format).unique().tolist()
-    groups["Investment type"] = ["Credit", "Grant", "Equity"]
+    groups["Investment instrument"] = ["Credit", "Grant", "Equity"]
     groups["Partner"] = deals["meta/partner"].dropna().unique().tolist()
 
     return groups
@@ -115,7 +115,7 @@ def get_filtered_df(filters):
             deals = deals[
                 deals["meta/partner"].fillna('None').apply(slugify).isin(v)
             ]
-        elif k=="investment-type":
+        elif k=="investment-instrument":
             CritList = []
             if "credit" in v:
                 CritList.append(deals["credit_count"].gt(0))
