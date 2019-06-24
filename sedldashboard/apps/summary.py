@@ -49,6 +49,7 @@ def layout(url):
             html.Div(className='w-50 pr3 mb3', id="deals-by-status"),
             html.Div(className='w-50 pr3 mb3', id="deals-by-region"),
             html.Div(className='w-50 pr3 mb3', id="deals-by-deprivation"),
+            html.Div(className='w-50 pr3 mb3', id="deals-by-instrument"),
             html.Div(className='w-100', id="about-the-data", children=[
                 html.H3(className='', children='About our data'),
                 dcc.Markdown(className='', children='''
@@ -111,7 +112,8 @@ def update_filters(*args):
                Output("heat-map", 'children'),
                Output("deals-by-status", 'children'),
                Output("deals-by-region", 'children'),
-               Output("deals-by-deprivation", 'children')],
+               Output("deals-by-deprivation", 'children'),
+               Output("deals-by-instrument", 'children')],
               [Input("filters-used", 'data')])
 def output_charts(filters):
     deals = get_filtered_df(filters)
@@ -128,6 +130,7 @@ def output_charts(filters):
             None,  # heat-map
             None,  # deals-by-status
             None,  # deals-by-region
+            None,  # deals-by-instrument
         )
 
     return (
@@ -139,6 +142,7 @@ def output_charts(filters):
         deals_by_status(agg),  # deals-by-status
         deals_by_region(agg), # deals-by-region
         deals_by_deprivation(agg), # deals-by-deprivation
+        deals_by_instrument(agg), # deals-by-instrument
     )
 
 
@@ -185,6 +189,7 @@ def data_summary(agg):
                     agg['summary']['count_with_grants'])),
                 ' deals involved grants, worth ',
                 html.Strong(currency(agg['summary']['grants_value'])),
+                ' ',
                 '({:,.0%} of total social investment)'.format(
                     agg['summary']['grants_value'] /
                     agg['summary']['deal_value']
@@ -280,6 +285,43 @@ def deals_by_status(agg):
         ),
         style={'maxHeight': '450px'},
         id='deals-by-status-fig'
+    )
+
+
+def deals_by_instrument(agg):
+    data = agg["by_instrument"]["deal_count"].sort_values(
+        ascending=False).unstack()
+    column_order = data.sum().sort_values().index
+    data = data[column_order]
+
+    return dcc.Graph(
+        figure=go.Figure(
+            data=[
+                go.Bar(
+                    y=data.columns.tolist(),
+                    x=d.tolist(),
+                    name=fund,
+                    orientation='h',
+                ) for fund, d in data.iterrows()
+            ],
+            layout=go.Layout(
+                title='Deals by instrument',
+                showlegend=True,
+                legend=go.layout.Legend(
+                    x=0,
+                    y=1.0
+                ),
+                xaxis=dict(
+                    automargin=True,
+                ),
+                yaxis=dict(
+                    automargin=True,
+                ),
+                margin=go.layout.Margin(l=40, r=0, t=40, b=30)
+            )
+        ),
+        style={'maxHeight': '450px'},
+        id='deals-by-instrument-fig'
     )
 
 def deals_by_region(agg):

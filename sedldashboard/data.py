@@ -68,6 +68,12 @@ def get_aggregates(deals):
     ).drop(columns=['classification']).rename(
         columns={0: 'classification'})
 
+    deals.loc[:, "components"] = pd.DataFrame([
+        deals.loc[:, "count_with_equity"].replace(1, "Equity"),
+        deals.loc[:, "count_with_credit"].replace(1, "Credit"),
+        deals.loc[:, "count_with_grants"].replace(1, "Grants")
+    ]).T.apply(lambda x: ', '.join([i for i in x if isinstance(i, str)]), axis=1)
+
     return dict(
         summary = deals.agg(aggregates),
         collections = deals.groupby(
@@ -82,6 +88,8 @@ def get_aggregates(deals):
             ["meta/partner", 'imd_decile']).agg(aggregates),
         by_status = deals.groupby(
             ["meta/partner", 'status']).agg(aggregates),
+        by_instrument = deals.groupby(
+            ["meta/partner", 'components']).agg(aggregates),
     )
 
 
