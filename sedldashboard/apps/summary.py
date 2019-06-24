@@ -11,6 +11,13 @@ from ..data import get_groups, get_aggregates, get_filtered_df, currency
 
 groups = get_groups()
 
+SEDL_COLOURS = [
+    "#0E67AB",
+    "#16C3D2",
+    "#3689BF",
+    "#333333",
+]
+
 def layout(url):
     filters = {}
     url = url[1:].split("/")
@@ -119,6 +126,12 @@ def output_charts(filters):
     deals = get_filtered_df(filters)
     agg = get_aggregates(deals)
 
+    funds = deals["meta/partner"].unique().tolist()
+    fund_colours = {
+        f: SEDL_COLOURS[k % len(funds)]
+        for k, f in enumerate(funds)
+    }
+
     if len(deals)==0:
         return (
             html.Div(className='ba bw2 b--blue br3 pa2', children=[
@@ -134,19 +147,19 @@ def output_charts(filters):
         )
 
     return (
-        data_summary(agg),  # data-summary
+        data_summary(agg, fund_colours),  # data-summary
         None,  # word-cloud
-        deals_by_year(agg),  # deals-by-year
-        deals_by_sector(agg), # deals-by-sector
-        heat_map(deals),  # heat-map
-        deals_by_status(agg),  # deals-by-status
-        deals_by_region(agg), # deals-by-region
-        deals_by_deprivation(agg), # deals-by-deprivation
-        deals_by_instrument(agg), # deals-by-instrument
+        deals_by_year(agg, fund_colours),  # deals-by-year
+        deals_by_sector(agg, fund_colours), # deals-by-sector
+        heat_map(deals, fund_colours),  # heat-map
+        deals_by_status(agg, fund_colours),  # deals-by-status
+        deals_by_region(agg, fund_colours), # deals-by-region
+        deals_by_deprivation(agg, fund_colours), # deals-by-deprivation
+        deals_by_instrument(agg, fund_colours), # deals-by-instrument
     )
 
 
-def data_summary(agg):
+def data_summary(agg, fund_colours):
     return html.Div(className='ba bw2 b--blue br3 pa2', children=[
         html.P(className='mt0 mb3 pa0', children=[
             html.Strong("{:,.0f}".format(agg['summary']['recipient_id'])),
@@ -198,187 +211,272 @@ def data_summary(agg):
         ]) if (agg['summary']['deal_value'] > 0) else None,
         html.P(className='mt0 mb0 pa0', children=[
             '*Based on data from ',
-            ", ".join(agg['collections'].index),
+        ] + [
+            html.Span([
+                (", " if k > 0 else None),
+                html.Span(i, style={"color": fund_colours.get(i)}, className='b'),
+            ])
+            for k, i in enumerate(agg['collections'].index)
         ]),
     ]),
 
-def deals_by_year(agg):
-    data = agg["by_year"]["deal_count"].unstack()
-    return dcc.Graph(
-        figure=go.Figure(
-            data=[
-                go.Scatter(
-                    x=data.columns.tolist(),
-                    y=d.tolist(),
-                    name=fund,
-                ) for fund, d in data.iterrows()
-            ],
-            layout=go.Layout(
-                title='Deals by year',
-                showlegend=True,
-                legend=go.layout.Legend(
-                    x=0,
-                    y=1.0
-                ),
-                xaxis=dict(
-                    automargin=True,
-                ),
-                yaxis=dict(
-                    automargin=True,
-                ),
-                margin=go.layout.Margin(l=40, r=0, t=40, b=30)
-            )
-        ),
-        style={'maxHeight': '450px'},
-        id='deals-by-year-fig'
-    )
 
-def deals_by_sector(agg):
+def deals_by_year(agg, fund_colours):
+    data = agg["by_year"]["deal_count"].unstack()
+    return [
+        html.H2("Deals per year", className="pa0 ma0 f4"),
+        html.P("Based on the effective date for the deal. {:,.0f} deals do not have a date value present.".format(
+            agg['summary']['deal_count'] - agg["by_year"]["deal_count"].sum()
+        )),
+        dcc.Graph(
+            figure=go.Figure(
+                data=[
+                    go.Scatter(
+                        x=data.columns.tolist(),
+                        y=d.tolist(),
+                        name=fund,
+                        line=dict(
+                            color=fund_colours.get(fund),
+                            width=3,
+                        ),
+                    ) for fund, d in data.iterrows()
+                ],
+                layout=go.Layout(
+                    showlegend=True,
+                    legend=go.layout.Legend(
+                        orientation='h',
+                    ),
+                    xaxis=dict(
+                        automargin=True,
+                        showgrid=False,
+                    ),
+                    yaxis=dict(
+                        automargin=True,
+                        showgrid=False,
+                    ),
+                    font=dict(
+                        size=14,
+                    ),
+                    margin=go.layout.Margin(l=40, r=0, t=40, b=30)
+                )
+            ),
+            config=dict(
+                displayModeBar=False,
+            ),
+            style={'maxHeight': '450px'},
+            id='deals-by-year-fig'
+        ),
+    ]
+
+
+def deals_by_sector(agg, fund_colours):
     data = agg["by_classification"]["deal_count"].sort_values(
         ascending=False).unstack()
     column_order = data.sum().sort_values().tail(10).index
     data = data[column_order]
 
-    return dcc.Graph(
-        figure=go.Figure(
-            data=[
-                go.Bar(
-                    y=data.columns.tolist(),
-                    x=d.tolist(),
-                    name=fund,
-                    orientation='h',
-                ) for fund, d in data.iterrows()
-            ],
-            layout=go.Layout(
-                title='Deals by sector',
-                showlegend=True,
-                legend=go.layout.Legend(
-                    x=0,
-                    y=1.0
-                ),
-                xaxis=dict(
-                    automargin=True,
-                ),
-                yaxis=dict(
-                    automargin=True,
-                ),
-                margin=go.layout.Margin(l=40, r=0, t=40, b=30)
-            )
-        ),
-        style={'maxHeight': '450px'},
-        id='deals-by-sector-fig'
-    )
+    return [
+        html.H2("By sector", className="pa0 ma0 f4"),
+        dcc.Markdown(
+            "Based on the sector provided by the data publisher, or on the [SIC code](https://en.wikipedia.org/wiki/Standard_Industrial_Classification) of the deal recipient."),
+        dcc.Graph(
+            figure=go.Figure(
+                data=[
+                    go.Bar(
+                        y=data.columns.tolist(),
+                        x=d.tolist(),
+                        name=fund,
+                        orientation='h',
+                        marker=dict(
+                            color=fund_colours.get(fund),
+                        ),
+                    ) for fund, d in data.iterrows()
+                ],
+                layout=go.Layout(
+                    showlegend=True,
+                    legend=go.layout.Legend(
+                        orientation='h',
+                    ),
+                    xaxis=dict(
+                        automargin=True,
+                        showgrid=False,
+                    ),
+                    yaxis=dict(
+                        automargin=True,
+                        showgrid=False,
+                    ),
+                    font=dict(
+                        size=14,
+                    ),
+                    margin=go.layout.Margin(l=40, r=0, t=40, b=30)
+                )
+            ),
+            config=dict(
+                displayModeBar=False,
+            ),
+            style={'maxHeight': '450px'},
+            id='deals-by-sector-fig'
+        )
+    ]
 
-def deals_by_status(agg):
+
+def deals_by_status(agg, fund_colours):
     data = agg["by_status"]["deal_count"].sort_values(
         ascending=False).unstack()
     column_order = data.sum().sort_values().index
     data = data[column_order]
 
-    return dcc.Graph(
-        figure=go.Figure(
-            data=[
-                go.Bar(
-                    y=data.columns.tolist(),
-                    x=d.tolist(),
-                    name=fund,
-                    orientation='h',
-                ) for fund, d in data.iterrows()
-            ],
-            layout=go.Layout(
-                title='Deals by status',
-                showlegend=True,
-                legend=go.layout.Legend(
-                    x=0,
-                    y=1.0
-                ),
-                xaxis=dict(
-                    automargin=True,
-                ),
-                yaxis=dict(
-                    automargin=True,
-                ),
-                margin=go.layout.Margin(l=40, r=0, t=40, b=30)
-            )
+    return [
+        html.H2("Deal status", className="pa0 ma0 f4"),
+        dcc.Markdown(
+            """
+            """
         ),
-        style={'maxHeight': '450px'},
-        id='deals-by-status-fig'
-    )
+        dcc.Graph(
+            figure=go.Figure(
+                data=[
+                    go.Bar(
+                        y=data.T.columns.tolist(),
+                        x=d.tolist(),
+                        name=fund,
+                        orientation='h',
+                    ) for fund, d in data.T.iterrows()
+                ],
+                layout=go.Layout(
+                    showlegend=True,
+                    legend=go.layout.Legend(
+                        orientation='h',
+                    ),
+                    barmode='stack',
+                    xaxis=dict(
+                        automargin=True,
+                        showgrid=False,
+                    ),
+                    yaxis=dict(
+                        automargin=True,
+                        showgrid=False,
+                    ),
+                    font=dict(
+                        size=14,
+                    ),
+                    margin=go.layout.Margin(l=40, r=0, t=40, b=30)
+                )
+            ),
+            config=dict(
+                displayModeBar=False,
+            ),
+            style={'maxHeight': '450px'},
+            id='deals-by-status-fig'
+        )
+    ]
 
 
-def deals_by_instrument(agg):
-    data = agg["by_instrument"]["deal_count"].sort_values(
-        ascending=False).unstack()
-    column_order = data.sum().sort_values().index
-    data = data[column_order]
+def deals_by_instrument(agg, fund_colours):
 
-    return dcc.Graph(
-        figure=go.Figure(
-            data=[
-                go.Bar(
-                    y=data.columns.tolist(),
-                    x=d.tolist(),
-                    name=fund,
-                    orientation='h',
-                ) for fund, d in data.iterrows()
-            ],
-            layout=go.Layout(
-                title='Deals by instrument',
-                showlegend=True,
-                legend=go.layout.Legend(
-                    x=0,
-                    y=1.0
-                ),
-                xaxis=dict(
-                    automargin=True,
-                ),
-                yaxis=dict(
-                    automargin=True,
-                ),
-                margin=go.layout.Margin(l=40, r=0, t=40, b=30)
-            )
+    def display_name(labels):
+        labels = [l for l in labels if not l.startswith("No ")]
+        if not labels:
+            return "No equity or credit"
+        return " & ".join(labels)
+
+    return [
+        html.H2("Investment instruments", className="pa0 ma0 f4"),
+        dcc.Markdown(
+            """
+Shows the combination of investment instruments used in each deal.
+            """
         ),
-        style={'maxHeight': '450px'},
-        id='deals-by-instrument-fig'
-    )
+    ] + [
+        html.Div([
+            html.H3(f, className="pa0 ma0 f5", style={
+                "color": fund_colours.get(f)
+            }),
+            dcc.Graph(
+                figure=go.Figure(
+                    data=[
+                        go.Heatmap(
+                            z=[data[c].fillna(0).tolist() for c in data.columns],
+                            x=[display_name(i) for i in data.index.tolist()],
+                            y=data.columns.tolist(),
+                            colorscale=[[0, '#fff'], [1, fund_colours.get(f)]],
+                        )
+                    ],
+                    layout=go.Layout(
+                        xaxis=dict(
+                            automargin=True,
+                            showgrid=False,
+                        ),
+                        yaxis=dict(
+                            automargin=True,
+                            showgrid=False,
+                        ),
+                        font=dict(
+                            size=14,
+                        ),
+                        height=250,
+                        margin=go.layout.Margin(l=40, r=0, t=40, b=30)
+                    )
+                ),
+                config=dict(
+                    displayModeBar=False,
+                ),
+                id='deals-by-instrument-fig-{}'.format(f)
+            )
+        ]) for f, data in agg["by_instrument"].items()
+    ]
 
-def deals_by_region(agg):
+
+def deals_by_region(agg, fund_colours):
     data = agg["by_region"]["deal_count"].sort_values(
         ascending=False).unstack()
     column_order = data.sum().sort_values().index
     data = data[column_order]
 
-    return dcc.Graph(
-        figure=go.Figure(
-            data=[
-                go.Bar(
-                    x=data.columns.tolist(),
-                    y=d.tolist(),
-                    name=fund,
-                ) for fund, d in data.iterrows()
-            ],
-            layout=go.Layout(
-                title='Deals by region',
-                showlegend=True,
-                legend=go.layout.Legend(
-                    x=0,
-                    y=1.0
-                ),
-                xaxis=dict(
-                    automargin=True,
-                ),
-                yaxis=dict(
-                    automargin=True,
-                ),
-                margin=go.layout.Margin(l=40, r=0, t=40, b=30)
-            )
+    return [
+        html.H2("Deal region", className="pa0 ma0 f4"),
+        dcc.Markdown(
+            """
+Based on the registered office of the recipient organisation.
+            """
         ),
-        style={'maxHeight': '450px'},
-        id='deals-by-region-fig'
-    )
+        dcc.Graph(
+            figure=go.Figure(
+                data=[
+                    go.Bar(
+                        x=data.columns.tolist(),
+                        y=d.tolist(),
+                        name=fund,
+                        marker=dict(
+                            color=fund_colours.get(fund),
+                        ),
+                    ) for fund, d in data.iterrows()
+                ],
+                layout=go.Layout(
+                    showlegend=True,
+                    xaxis=dict(
+                        automargin=True,
+                        showgrid=False,
+                    ),
+                    yaxis=dict(
+                        automargin=True,
+                        showgrid=False,
+                    ),
+                    font=dict(
+                        size=14,
+                    ),
+                    margin=go.layout.Margin(l=40, r=0, t=40, b=30)
+                )
+            ),
+            config=dict(
+                displayModeBar=False,
+            ),
+            style={'maxHeight': '450px'},
+            id='deals-by-region-fig'
+        )
+    ]
 
 
-def deals_by_deprivation(agg):
+def deals_by_deprivation(agg, fund_colours):
     data = agg["by_deprivation"]["deal_count"].sort_values(
         ascending=False).unstack()
     column_order = sorted(
@@ -387,76 +485,115 @@ def deals_by_deprivation(agg):
     )
     data = data[column_order]
 
-    return dcc.Graph(
-        figure=go.Figure(
-            data=[
-                go.Bar(
-                    x=data.columns.tolist(),
-                    y=d.tolist(),
-                    name=fund,
-                ) for fund, d in data.iterrows()
-            ],
-            layout=go.Layout(
-                title='Deals by deprivation decile',
-                showlegend=True,
-                legend=go.layout.Legend(
-                    x=0,
-                    y=1.0
-                ),
-                xaxis=dict(
-                    type='category',
-                    automargin=True,
-                ),
-                yaxis=dict(
-                    automargin=True,
-                ),
-                margin=go.layout.Margin(l=40, r=0, t=40, b=30)
-            )
+    return [
+        html.H2("Deprivation decile", className="pa0 ma0 f4"),
+        dcc.Markdown(
+            """
+Uses the rank of the index of multiple deprivation for the 
+[Lower Super Output Area (LSOA)](https://www.datadictionary.nhs.uk/data_dictionary/nhs_business_definitions/l/lower_layer_super_output_area_de.asp?shownav=1)
+in which the recipient organisation's registered office is based.
+Only available for organisations based in England.
+            """
         ),
-        style={'maxHeight': '450px'},
-        id='deals-by-deprivation-fig'
-    )
+        dcc.Graph(
+            figure=go.Figure(
+                data=[
+                    go.Bar(
+                        x=data.columns.tolist(),
+                        y=d.tolist(),
+                        name=fund,
+                        marker=dict(
+                            color=fund_colours.get(fund),
+                        ),
+                    ) for fund, d in data.iterrows()
+                ],
+                layout=go.Layout(
+                    showlegend=True,
+                    xaxis=dict(
+                        type='category',
+                        automargin=True,
+                        showgrid=False,
+                    ),
+                    yaxis=dict(
+                        automargin=True,
+                        showgrid=False,
+                    ),
+                    font=dict(
+                        size=14,
+                    ),
+                    margin=go.layout.Margin(l=40, r=0, t=40, b=30)
+                )
+            ),
+            config=dict(
+                displayModeBar=False,
+            ),
+            style={'maxHeight': '450px'},
+            id='deals-by-deprivation-fig'
+        )
+    ]
 
 
-def heat_map(deals):
+def heat_map(deals, fund_colours):
 
     latlongs = deals.loc[deals['latitude'].apply(
-        type) == float, ['latitude', 'longitude']].dropna(how='any')
+        type) == float, ['meta/partner', 'latitude', 'longitude']].dropna(how='any')
     lats = latlongs.latitude.tolist()
     longs = latlongs.longitude.tolist()
 
-    if not lats:
+    if not len(latlongs):
         return None
 
-    return dcc.Graph(
-        figure=go.Figure(
-            data=[
-                go.Scattermapbox(
-                    lat=lats,
-                    lon=longs,
-                    mode='markers',
-                    marker=go.scattermapbox.Marker(
-                        size=9
-                    ),
-                )
-            ],
-            layout=go.Layout(
-                autosize=True,
-                hovermode='closest',
-                mapbox=go.layout.Mapbox(
-                    accesstoken='pk.eyJ1IjoiZGF2aWRrYW5lIiwiYSI6ImNqdm5zb2ZveTB5M280MWxlejdxNHRscW4ifQ.iIc5s6Eq9D7xq9IFT39dlQ',
-                    bearing=0,
-                    center=go.layout.mapbox.Center(
-                        lat=(sum(lats) / len(lats)),
-                        lon=(sum(longs) / len(longs))
-                    ),
-                    pitch=0,
-                    zoom=4
-                ),
-                margin=go.layout.Margin(l=0, r=0, t=0, b=0)
-            )
+    return [
+        html.H2("Deal location", className="pa0 ma0 f4"),
+        dcc.Markdown(
+            """
+Based on location of the recipient organisation. For some
+organisations this may represent their headquarters, rather than
+where the activity takes place.
+            """
         ),
-        style={'maxHeight': '450px'},
-        id='heat-map-fig'
-    )
+        dcc.Graph(
+            figure=go.Figure(
+                data=[
+                    go.Scattermapbox(
+                        lat=latlongs[latlongs["meta/partner"]
+                                    ==f].latitude.tolist(),
+                        lon=latlongs[latlongs["meta/partner"]
+                                    == f].longitude.tolist(),
+                        mode='markers',
+                        name=f,
+                        marker=go.scattermapbox.Marker(
+                            size=9,
+                            color=fund_colours.get(f),
+                        ),
+                        hoverinfo='none',
+                    ) for f in latlongs['meta/partner'].unique()
+                ],
+                layout=go.Layout(
+                    autosize=True,
+                    hovermode='closest',
+                    mapbox=go.layout.Mapbox(
+                        accesstoken='pk.eyJ1IjoiZGF2aWRrYW5lIiwiYSI6ImNqdm5zb2ZveTB5M280MWxlejdxNHRscW4ifQ.iIc5s6Eq9D7xq9IFT39dlQ',
+                        bearing=0,
+                        center=go.layout.mapbox.Center(
+                            lat=(sum(lats) / len(lats)),
+                            lon=(sum(longs) / len(longs))
+                        ),
+                        pitch=0,
+                        zoom=4
+                    ),
+                    showlegend=True,
+                    legend=go.layout.Legend(
+                        orientation='h',
+                    ),
+                    margin=go.layout.Margin(l=0, r=0, t=0, b=0)
+                )
+            ),
+            config=dict(
+                displayModeBar=False,
+            ),
+            style={'maxHeight': '450px'},
+            id='heat-map-fig'
+        )
+    ]
 
