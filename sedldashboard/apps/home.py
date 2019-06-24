@@ -32,10 +32,7 @@ layout = [
     html.Div(className='fl w-75 pr3', children=[
         html.H2(
             className='', children='Explore UK social investment insights from our partners'),
-        html.Div(className='w-100 pr3 mv3', children=[
-            dcc.Input(className='w-100 pa2 br3 ba bw1', placeholder='Search'),
-        ]),
-        menu_item('', ["All social investment"]),
+       menu_item('', ["All social investment"]),
     ] + [
         menu_item(group, items) for group, items in groups.items()
     ] + [
