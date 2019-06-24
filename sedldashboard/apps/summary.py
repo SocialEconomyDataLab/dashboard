@@ -159,6 +159,9 @@ def data_summary(agg):
         ]),
         html.Ul(className='', children=[
             html.Li(className='', children=[
+                html.Strong("{:.0f}".format(
+                    agg['summary']['count_with_equity'])),
+                ' deals involved equity, with ',
                 html.Strong(currency(agg['summary']['equity_value'])),
                 ' of equity arranged ',
                 '({:,.0%} of total social investment)'.format(
@@ -167,6 +170,9 @@ def data_summary(agg):
                 )
             ]) if agg["summary"]["equity_value"] else None,
             html.Li(className='', children=[
+                html.Strong("{:.0f}".format(
+                    agg['summary']['count_with_credit'])),
+                ' deals involved credit, worth ',
                 html.Strong(currency(agg['summary']['credit_value'])),
                 ' of credit ',
                 '({:,.0%} of total social investment)'.format(
@@ -175,8 +181,10 @@ def data_summary(agg):
                 )
             ]) if agg["summary"]["credit_value"] else None,
             html.Li(className='', children=[
+                html.Strong("{:.0f}".format(
+                    agg['summary']['count_with_grants'])),
+                ' deals involved grants, worth ',
                 html.Strong(currency(agg['summary']['grants_value'])),
-                ' of grants ',
                 '({:,.0%} of total social investment)'.format(
                     agg['summary']['grants_value'] /
                     agg['summary']['deal_value']
