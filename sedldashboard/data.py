@@ -29,7 +29,7 @@ def get_groups():
     groups["Sector"] = deals["classification"].apply(
         pd.Series).unstack().dropna().sort_values().unique().tolist()
     groups["Status"] = deals["status"].dropna().unique().tolist()
-    groups["Year"] = deals["dealDate"].dt.year.dropna().sort_values().apply(
+    groups["Year"] = deals.loc[deals["dealDate"].dt.year > 1980, "dealDate"].dt.year.dropna().sort_values().apply(
         "{:.0f}".format).unique().tolist()
     groups["Investment type"] = ["Credit", "Grant", "Equity"]
     groups["Partner"] = deals["meta/partner"].dropna().unique().tolist()
@@ -39,9 +39,10 @@ def get_groups():
 
 def get_aggregates(deals):
 
-    deals.loc[:, "deal_year"] = deals["dealDate"].dt.year
-    deals.loc[:, "deal_year_min"] = deals["dealDate"].dt.year
-    deals.loc[:, "deal_year_max"] = deals["dealDate"].dt.year
+    deals.loc[:, "deal_year"] = deals.loc[deals["dealDate"].dt.year >
+                                          1980, "dealDate"].dt.year
+    deals.loc[:, "deal_year_min"] = deals.loc[:, "deal_year"]
+    deals.loc[:, "deal_year_max"] = deals.loc[:, "deal_year"]
 
     aggregates = {
         "deal_count": "sum",
