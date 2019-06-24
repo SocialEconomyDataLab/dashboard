@@ -97,6 +97,14 @@ def get_filtered_df(filters):
 
     groups = get_groups()
     deals = get_deals()
+    
+    # if we're not filtering by status then default to live and closed deals
+    if "status" not in filters:
+        deals = deals[
+            deals["status"].fillna('None').apply(slugify).isin([
+                "closed", "live", "pipeline",
+            ])
+        ]
 
     for k, v in filters.items():
         if not v:
