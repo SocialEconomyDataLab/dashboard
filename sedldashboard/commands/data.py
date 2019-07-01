@@ -22,7 +22,7 @@ GOOGLE_SCOPE = ['https://spreadsheets.google.com/feeds',
 
 def getGoogleSheets(keyfile):
     # Logging into Google Drive and Google Sheets
-    googleCredentials = ServiceAccountCredentials. from_json_keyfile_name(
+    googleCredentials = ServiceAccountCredentials.from_json_keyfile_name(
         keyfile, GOOGLE_SCOPE)
     return gspread.authorize(googleCredentials)  # Authorise Google credentials
 
