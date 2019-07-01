@@ -27,7 +27,7 @@ def layout(url):
     return [
         dcc.Store(id='url-filters', data=filters),
         dcc.Store(id='filters-used'),
-        html.Div(className='fl w-25', children=[
+        html.Div(className='fl w-100 w-25-l mb3', children=[
             html.Div(className='', children=[
                 html.H3(className='mt0 mb2 pa0', children='Filters'),
                 dcc.Input(className='w-100 pa1 br2 ba bw1', type='text',
@@ -47,16 +47,16 @@ def layout(url):
                 ]) for group, items in groups.items()
             ]),
         ]),
-        html.Div(className='fl w-75 pl3 flex flex-wrap', children=[
-            html.Div(className='w-two-thirds pr3 mb3', id="data-summary"),
+        html.Div(className='fl w-100 w-75-l pl3-l mv2 mv0-l flex flex-wrap', children=[
+            html.Div(className='w-100 w-two-thirds-l pr3 mb3', id="data-summary"),
             # html.Div(className='w-50 pr3 mb3', id="word-cloud"),
-            html.Div(className='w-50 pr3 mb3', id="deals-by-year"),
-            html.Div(className='w-50 pr3 mb3', id="deals-by-sector"),
-            html.Div(className='w-50 pr3 mb3', id="heat-map"),
-            html.Div(className='w-50 pr3 mb3', id="deals-by-status"),
-            html.Div(className='w-50 pr3 mb3', id="deals-by-region"),
-            html.Div(className='w-50 pr3 mb3', id="deals-by-deprivation"),
-            html.Div(className='w-50 pr3 mb3', id="deals-by-instrument"),
+            html.Div(className='w-100 w-50-l pr3 mb3', id="deals-by-year"),
+            html.Div(className='w-100 w-50-l pr3 mb3', id="deals-by-sector"),
+            html.Div(className='w-100 w-50-l pr3 mb3', id="heat-map"),
+            html.Div(className='w-100 w-50-l pr3 mb3', id="deals-by-status"),
+            html.Div(className='w-100 w-50-l pr3 mb3', id="deals-by-region"),
+            html.Div(className='w-100 w-50-l pr3 mb3', id="deals-by-deprivation"),
+            html.Div(className='w-100 w-50-l pr3 mb3', id="deals-by-instrument"),
             html.Div(className='w-100', id="about-the-data", children=[
                 html.H3(className='', children='About our data'),
                 dcc.Markdown(className='', children='''
@@ -82,7 +82,7 @@ pretium. Per nibh pulvinar ligula, nulla ipsum felis.
                 '''),
             ]),
         ]),
-        html.Pre(id='filters-used-pre', className='w-100 fl',
+        html.Pre(id='filters-used-pre', className='w-100 fl dn',
                  children=json.dumps(filters)),
     ]
 
@@ -308,7 +308,7 @@ def deals_by_sector(agg, fund_colours):
                     font=dict(
                         size=14,
                     ),
-                    margin=go.layout.Margin(l=40, r=0, t=40, b=30)
+                    # margin=go.layout.Margin(l=40, r=0, t=40, b=30)
                 )
             ),
             config=dict(

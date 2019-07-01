@@ -29,7 +29,7 @@ def menu_item(group, items):
     ])
 
 layout = [
-    html.Div(className='fl w-75 pr3', children=[
+    html.Div(className='fl w-100 w-75-l pr3-l', children=[
         html.H2(
             className='', children='Explore UK social investment insights from our partners'),
        menu_item('', ["All social investment"]),
@@ -45,8 +45,8 @@ layout = [
             ]),
         ]),
     ]),
-    html.Div(className='fl w-25 pl3', children=[
-        html.Div(className='ma2 bw2 b--blue ba br3 pa2', children=[
+    html.Div(className='fl w-100 w-25-l pl3-l', children=[
+        html.Div(className='mv3 ma2-l bw2 b--blue ba br3 pa2', children=[
             html.H3(className='mt0 mb2 pa0 blue', children='Supported by'),
             html.Img(
                 src='https://www.powertochange.org.uk/wp-content/themes/power-to-change/assets/svg/power-to-change.svg'),
