@@ -27,7 +27,7 @@ def get_groups():
     )
 
     groups["Sector"] = deals["classification"].apply(
-        pd.Series).unstack().dropna().sort_values().unique().tolist()
+        pd.Series).unstack().dropna().str.strip().sort_values().unique().tolist()
     groups["Status"] = deals["status"].dropna().unique().tolist()
     groups["Year"] = deals.loc[deals["dealDate"].dt.year > 1980, "dealDate"].dt.year.dropna().sort_values().apply(
         "{:.0f}".format).unique().tolist()
