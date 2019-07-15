@@ -92,6 +92,8 @@ You can also use the additional command flags:
 - `--sheet https://docs.google.com/spreadsheets/d/1234567890abcde/edit#gid=0` to set the spreadsheet containing the file list
 - `--output /path/to/folder` - folder where the output will be saved 
 
+In the default setup this data import command is only run manually. However, it would be possible to [set up a cron job](https://askubuntu.com/questions/2368/how-do-i-set-up-a-cron-job) to run this command on the data on a nightly basis.
+
 ## Setup
 
 How to get a development/live version of the tool up and running. See also the section below
