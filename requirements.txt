@@ -48,5 +48,5 @@ text-unidecode==1.2
 traitlets==4.3.2
 ua-parser==0.8.0
 urllib3==1.24.3
-Werkzeug==0.15.2
+Werkzeug==0.15.3
 xlrd==1.2.0
