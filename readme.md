@@ -128,7 +128,7 @@ Now you need to setup the environment variables. This can done by
 creating a `.env` file in the `dashboard` folder, with the following contents:
 
 ```
-FLASK_APP=sedldashboard.app:server
+FLASK_APP=sedldashboard.index:server
 FILE_LOCATION=data
 IMPORT_FILE=https://docs.google.com/spreadsheets/d/1WVnY5nK7ji5TaVZYcOTexuiekyFLyPfMvFC2kh2Ogp4/edit#gid=0
 ```
@@ -201,7 +201,7 @@ dokku storage:mount sedldash /var/lib/dokku/data/storage/sedldash:/app/storage
 ### 3. Add environmental variables (on server)
 
 ```
-dokku config:set sedldash FLASK_APP=sedldashboard.app:server
+dokku config:set sedldash FLASK_APP=sedldashboard.index:server
 dokku config:set sedldash FILE_LOCATION=/app/storage
 dokku config:set sedldash AUTH_USERNAME=sedl AUTH_PASSWORD=[PUT PASSWORD HERE]
 dokku config:set sedldash IMPORT_FILE=https://docs.google.com/spreadsheets/d/1WVnY5nK7ji5TaVZYcOTexuiekyFLyPfMvFC2kh2Ogp4/edit#gid=0
